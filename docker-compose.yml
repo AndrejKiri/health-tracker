@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: health_postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./db/seed_sample_data.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    environment:
+      POSTGRES_DB: health_tracker
+      POSTGRES_USER: health
+      POSTGRES_PASSWORD: health
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U health -d health_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: health_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: health_grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: health
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/health-timeline.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  extractor:
+    build: ./extractor
+    container_name: health_extractor
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    volumes:
+      - ./data/inbox:/data/inbox
+      - ./data/processed:/data/processed
+      - ./data/failed:/data/failed
+      - ./db:/app/db
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: health_tracker
+      DB_USER: health
+      DB_PASSWORD: health
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.1:8b
+      WATCH_DIR: /data/inbox
+      PROCESSED_DIR: /data/processed
+      FAILED_DIR: /data/failed
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  grafana_data:
+  ollama_data:

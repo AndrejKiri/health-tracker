@@ -1,0 +1,866 @@
+[
+  {
+    "measurement": "A/G Ratio",
+    "unit": "",
+    "reference_low": 1,
+    "reference_high": 2.5,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "ACTH",
+    "unit": "pg/mL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Endocrine"
+  },
+  {
+    "measurement": "ALT",
+    "unit": "U/L",
+    "reference_low": 9,
+    "reference_high": 46,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "AST",
+    "unit": "U/L",
+    "reference_low": 10,
+    "reference_high": 40,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Abs Basophils",
+    "unit": "x10E9/L",
+    "reference_low": 0,
+    "reference_high": 0.2,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "Abs Eosinophils",
+    "unit": "x10E9/L",
+    "reference_low": 0.015,
+    "reference_high": 0.5,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "Abs Immature Granulocytes",
+    "unit": "x10E9/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "Abs Lymphocytes",
+    "unit": "x10E9/L",
+    "reference_low": 1,
+    "reference_high": 3.4,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "Abs Monocytes",
+    "unit": "x10E9/L",
+    "reference_low": 0.2,
+    "reference_high": 0.95,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "Abs Neutrophils",
+    "unit": "x10E9/L",
+    "reference_low": 1.5,
+    "reference_high": 7.8,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "Albumin",
+    "unit": "g/dL",
+    "reference_low": 3.6,
+    "reference_high": 5.1,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Alk Phos",
+    "unit": "U/L",
+    "reference_low": 36,
+    "reference_high": 130,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Anion Gap",
+    "unit": "",
+    "reference_low": 3,
+    "reference_high": 12,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Apolipoprotein B",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "BNP",
+    "unit": "pg/mL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Cardiac Markers"
+  },
+  {
+    "measurement": "BUN",
+    "unit": "mg/dL",
+    "reference_low": 7,
+    "reference_high": 25,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "BUN/Creatinine Ratio",
+    "unit": "",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "Base Excess",
+    "unit": "mmol/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Blood Gas"
+  },
+  {
+    "measurement": "Basophils %",
+    "unit": "%",
+    "reference_low": 0,
+    "reference_high": 1,
+    "scale": "linear",
+    "category": "WBC Differential (%)"
+  },
+  {
+    "measurement": "CD16/CD56 NK Cells %",
+    "unit": "% Lymphs",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD19 B Cells %",
+    "unit": "% Lymphs",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD19 B Cells Abs",
+    "unit": "x10E6/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD3 T Cells %",
+    "unit": "% Lymphs",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD3 T Cells Abs",
+    "unit": "x10E6/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD4 T Cells %",
+    "unit": "% Lymphs",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD4 T Cells Abs",
+    "unit": "x10E6/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD4/CD8 Ratio",
+    "unit": "ratio",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD8 T Cells %",
+    "unit": "% Lymphs",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CD8 T Cells Abs",
+    "unit": "x10E6/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lymphocyte Subsets"
+  },
+  {
+    "measurement": "CK",
+    "unit": "U/L",
+    "reference_low": 44,
+    "reference_high": 196,
+    "scale": "linear",
+    "category": "Cardiac Markers"
+  },
+  {
+    "measurement": "CK-MB",
+    "unit": "ug/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Cardiac Markers"
+  },
+  {
+    "measurement": "CO2",
+    "unit": "mmol/L",
+    "reference_low": 20,
+    "reference_high": 32,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "CRP",
+    "unit": "mg/L",
+    "reference_low": 0,
+    "reference_high": 5,
+    "scale": "logarithmic",
+    "category": "Inflammatory Markers"
+  },
+  {
+    "measurement": "Calcium",
+    "unit": "mg/dL",
+    "reference_low": 8.6,
+    "reference_high": 10.3,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Chloride",
+    "unit": "mmol/L",
+    "reference_low": 98,
+    "reference_high": 110,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Cholesterol/HDL Ratio",
+    "unit": "",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "Cortisol",
+    "unit": "ug/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Endocrine"
+  },
+  {
+    "measurement": "Creatinine",
+    "unit": "mg/dL",
+    "reference_low": 0.6,
+    "reference_high": 1.29,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Direct Bilirubin",
+    "unit": "mg/dL",
+    "reference_low": 0,
+    "reference_high": 0.2,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "ESR",
+    "unit": "mm/h",
+    "reference_low": 0,
+    "reference_high": 15,
+    "scale": "linear",
+    "category": "Inflammatory Markers"
+  },
+  {
+    "measurement": "Eosinophils %",
+    "unit": "%",
+    "reference_low": 1,
+    "reference_high": 4,
+    "scale": "linear",
+    "category": "WBC Differential (%)"
+  },
+  {
+    "measurement": "Ferritin",
+    "unit": "ng/mL",
+    "reference_low": 38,
+    "reference_high": 380,
+    "scale": "linear",
+    "category": "Iron Studies"
+  },
+  {
+    "measurement": "Fibrinogen",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Coagulation"
+  },
+  {
+    "measurement": "Folate",
+    "unit": "ng/mL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Vitamins"
+  },
+  {
+    "measurement": "Free T3",
+    "unit": "pg/mL",
+    "reference_low": 2.3,
+    "reference_high": 4.2,
+    "scale": "linear",
+    "category": "Thyroid"
+  },
+  {
+    "measurement": "Free T4",
+    "unit": "ng/dL",
+    "reference_low": 0.8,
+    "reference_high": 1.8,
+    "scale": "linear",
+    "category": "Thyroid"
+  },
+  {
+    "measurement": "GGT",
+    "unit": "U/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Globulin",
+    "unit": "g/dL",
+    "reference_low": 2,
+    "reference_high": 3.5,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Glucose",
+    "unit": "mg/dL",
+    "reference_low": 70,
+    "reference_high": 100,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Glucose, Urine",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "HDL Cholesterol",
+    "unit": "mg/dL",
+    "reference_low": 40,
+    "reference_high": 60,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "Hematocrit",
+    "unit": "%",
+    "reference_low": 41,
+    "reference_high": 53,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "Hemoglobin",
+    "unit": "g/dL",
+    "reference_low": 13.5,
+    "reference_high": 17.7,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "Hemoglobin A1c",
+    "unit": "%",
+    "reference_low": 4,
+    "reference_high": 5.6,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "IL-6",
+    "unit": "pg/mL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "logarithmic",
+    "category": "Inflammatory Markers"
+  },
+  {
+    "measurement": "INR",
+    "unit": "",
+    "reference_low": 0.8,
+    "reference_high": 1.2,
+    "scale": "linear",
+    "category": "Coagulation"
+  },
+  {
+    "measurement": "Immature Granulocytes %",
+    "unit": "%",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "WBC Differential (%)"
+  },
+  {
+    "measurement": "Insulin",
+    "unit": "uIU/mL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Endocrine"
+  },
+  {
+    "measurement": "Ionized Calcium",
+    "unit": "mmol/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "Iron",
+    "unit": "mcg/dL",
+    "reference_low": 60,
+    "reference_high": 170,
+    "scale": "linear",
+    "category": "Iron Studies"
+  },
+  {
+    "measurement": "Ketones, Urine",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "LDH",
+    "unit": "U/L",
+    "reference_low": 120,
+    "reference_high": 246,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "LDL Cholesterol",
+    "unit": "mg/dL",
+    "reference_low": 0,
+    "reference_high": 100,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "Lactate",
+    "unit": "mmol/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "Lymphocytes %",
+    "unit": "%",
+    "reference_low": 20,
+    "reference_high": 40,
+    "scale": "linear",
+    "category": "WBC Differential (%)"
+  },
+  {
+    "measurement": "MCH",
+    "unit": "pg",
+    "reference_low": 27,
+    "reference_high": 33,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "MCHC",
+    "unit": "g/dL",
+    "reference_low": 32,
+    "reference_high": 36,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "MCV",
+    "unit": "fL",
+    "reference_low": 80,
+    "reference_high": 100,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "MPV",
+    "unit": "fL",
+    "reference_low": 7.5,
+    "reference_high": 12.5,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "Magnesium",
+    "unit": "mg/dL",
+    "reference_low": 1.7,
+    "reference_high": 2.2,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "Mean Plasma Glucose",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "Monocytes %",
+    "unit": "%",
+    "reference_low": 2,
+    "reference_high": 8,
+    "scale": "linear",
+    "category": "WBC Differential (%)"
+  },
+  {
+    "measurement": "Neutrophils %",
+    "unit": "%",
+    "reference_low": 40,
+    "reference_high": 70,
+    "scale": "linear",
+    "category": "WBC Differential (%)"
+  },
+  {
+    "measurement": "Non-HDL Cholesterol",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "Nucleated RBC",
+    "unit": "/100 WBC",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "Oxygen Saturation",
+    "unit": "%",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Blood Gas"
+  },
+  {
+    "measurement": "PCO2",
+    "unit": "mm Hg",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Blood Gas"
+  },
+  {
+    "measurement": "PO2",
+    "unit": "mm Hg",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Blood Gas"
+  },
+  {
+    "measurement": "PT",
+    "unit": "sec",
+    "reference_low": 11,
+    "reference_high": 14,
+    "scale": "linear",
+    "category": "Coagulation"
+  },
+  {
+    "measurement": "PTT",
+    "unit": "sec",
+    "reference_low": 25,
+    "reference_high": 35,
+    "scale": "linear",
+    "category": "Coagulation"
+  },
+  {
+    "measurement": "Phosphorus",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "Platelets",
+    "unit": "x10E9/L",
+    "reference_low": 150,
+    "reference_high": 400,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "Potassium",
+    "unit": "mmol/L",
+    "reference_low": 3.5,
+    "reference_high": 5.1,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Preliminary ANC",
+    "unit": "x10E9/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "WBC Differential (absolute)"
+  },
+  {
+    "measurement": "RBC",
+    "unit": "x10E12/L",
+    "reference_low": 4.5,
+    "reference_high": 5.5,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "RDW",
+    "unit": "%",
+    "reference_low": 11.5,
+    "reference_high": 14.5,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "Reticulocyte Count",
+    "unit": "x10E9/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "Sodium",
+    "unit": "mmol/L",
+    "reference_low": 136,
+    "reference_high": 145,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "Specific Gravity, Urine",
+    "unit": "",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "T3 Total",
+    "unit": "ng/dL",
+    "reference_low": 87,
+    "reference_high": 167,
+    "scale": "linear",
+    "category": "Thyroid"
+  },
+  {
+    "measurement": "T4 Total",
+    "unit": "mcg/dL",
+    "reference_low": 4.9,
+    "reference_high": 10.5,
+    "scale": "linear",
+    "category": "Thyroid"
+  },
+  {
+    "measurement": "TIBC",
+    "unit": "mcg/dL",
+    "reference_low": 250,
+    "reference_high": 370,
+    "scale": "linear",
+    "category": "Iron Studies"
+  },
+  {
+    "measurement": "TSH",
+    "unit": "mIU/L",
+    "reference_low": 0.4,
+    "reference_high": 4.5,
+    "scale": "logarithmic",
+    "category": "Thyroid"
+  },
+  {
+    "measurement": "Total Bilirubin",
+    "unit": "mg/dL",
+    "reference_low": 0.1,
+    "reference_high": 1.2,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Total Cholesterol",
+    "unit": "mg/dL",
+    "reference_low": 0,
+    "reference_high": 200,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "Total Protein",
+    "unit": "g/dL",
+    "reference_low": 6,
+    "reference_high": 8.3,
+    "scale": "linear",
+    "category": "Liver Panel"
+  },
+  {
+    "measurement": "Transferrin Saturation",
+    "unit": "%",
+    "reference_low": 20,
+    "reference_high": 50,
+    "scale": "linear",
+    "category": "Iron Studies"
+  },
+  {
+    "measurement": "Triglycerides",
+    "unit": "mg/dL",
+    "reference_low": 0,
+    "reference_high": 150,
+    "scale": "linear",
+    "category": "Lipid Panel"
+  },
+  {
+    "measurement": "Troponin I",
+    "unit": "ug/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Cardiac Markers"
+  },
+  {
+    "measurement": "Uric Acid",
+    "unit": "mg/dL",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other Chemistry"
+  },
+  {
+    "measurement": "Urine pH",
+    "unit": "",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "Vancomycin",
+    "unit": "mg/L",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Other"
+  },
+  {
+    "measurement": "Vitamin B12",
+    "unit": "pg/mL",
+    "reference_low": 200,
+    "reference_high": 900,
+    "scale": "linear",
+    "category": "Vitamins"
+  },
+  {
+    "measurement": "Vitamin D",
+    "unit": "ng/mL",
+    "reference_low": 30,
+    "reference_high": 100,
+    "scale": "linear",
+    "category": "Vitamins"
+  },
+  {
+    "measurement": "WBC",
+    "unit": "x10E9/L",
+    "reference_low": 3.4,
+    "reference_high": 10,
+    "scale": "linear",
+    "category": "Complete Blood Count"
+  },
+  {
+    "measurement": "eGFR",
+    "unit": "",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Metabolic Panel"
+  },
+  {
+    "measurement": "hsCRP",
+    "unit": "mg/L",
+    "reference_low": 0,
+    "reference_high": 1,
+    "scale": "logarithmic",
+    "category": "Inflammatory Markers"
+  },
+  {
+    "measurement": "pH",
+    "unit": "",
+    "reference_low": null,
+    "reference_high": null,
+    "scale": "linear",
+    "category": "Blood Gas"
+  }
+]
