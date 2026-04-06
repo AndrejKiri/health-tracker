@@ -224,7 +224,7 @@ ON CONFLICT (measurement) DO UPDATE SET
 
 ## Sample Data
 
-The repository does **not** include a large SQL seed file (keep `db/seed_sample_data.sql` private on your machine if you use one). First-time database init runs `db/02-seed.sql`, which only satisfies the second init step; the database starts empty aside from schema and reference-range seeding from `init.sql`.
+The repository does **not** include a large SQL seed file (keep `db/seed_sample_data.sql` private on your machine if you use one). First-time database init runs `db/02-post-schema-placeholder.sql` after `init.sql`; it does not insert sample rows—it only satisfies the second init script slot. The database starts empty aside from schema and reference-range seeding from `init.sql`.
 
 If you maintain a local `db/seed_sample_data.sql` (for example derived from the [osteosarc.com](https://osteosarc.com/timeline/) timeline-style dataset), load it after Postgres is healthy:
 
@@ -258,7 +258,7 @@ health-tracker/
 ├── reference_ranges.json       # 108 measurement reference ranges
 ├── db/
 │   ├── init.sql                # Schema + reference range seeds
-│   ├── 02-seed.sql             # Minimal placeholder for second init script (committed)
+│   ├── 02-post-schema-placeholder.sql  # No-op second init step (no bundled lab/event seed)
 │   └── seed_sample_data.sql    # Optional large seed (gitignored; keep local only)
 ├── extractor/
 │   ├── Dockerfile
