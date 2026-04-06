@@ -26,7 +26,7 @@ docker compose up -d
 ```
 
 This starts:
-- **PostgreSQL** on port 5432 (auto-creates schema + seeds sample data)
+- **PostgreSQL** on port 5432 (auto-creates schema; optional local sample seed is not in the repo)
 - **Ollama** on port 11434 (LLM server)
 - **Grafana** on port 3000 (dashboards)
 - **Extractor** service (watches `data/inbox/` for new PDFs)
@@ -54,7 +54,7 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 - Username: `admin`
 - Password: `health`
 
-The **Health Timeline** dashboard loads automatically with sample data (3,200+ lab results, 300+ medical events from the osteosarc.com dataset).
+The **Health Timeline** dashboard loads automatically. If you have a local `db/seed_sample_data.sql` (not tracked in Git), import it after the stack is up to populate the same kind of demo timeline (thousands of lab rows and events). See [Sample Data](#sample-data).
 
 ### 4. Process your own PDFs
 
@@ -224,13 +224,15 @@ ON CONFLICT (measurement) DO UPDATE SET
 
 ## Sample Data
 
-The stack comes pre-seeded with data from the [osteosarc.com](https://osteosarc.com/timeline/) project:
+The repository does **not** include a large SQL seed file (keep `db/seed_sample_data.sql` private on your machine if you use one). First-time database init runs `db/02-seed.sql`, which only satisfies the second init step; the database starts empty aside from schema and reference-range seeding from `init.sql`.
 
-- 3,257 lab results across 170 measurements
-- 311 medical events (imaging, procedures, treatments)
-- 36 MRD (minimal residual disease) measurements
+If you maintain a local `db/seed_sample_data.sql` (for example derived from the [osteosarc.com](https://osteosarc.com/timeline/) timeline-style dataset), load it after Postgres is healthy:
 
-This gives you a fully populated dashboard to explore immediately.
+```bash
+docker compose exec -T postgres psql -U health -d health_tracker < db/seed_sample_data.sql
+```
+
+That style of file typically includes thousands of lab results, hundreds of medical events, and MRD rows—enough to fully populate the Grafana dashboard.
 
 Three sample PDFs in `tests/sample_pdfs/` can be used to test the extraction pipeline:
 - `complete_blood_count_2024.pdf` — CBC panel
@@ -256,7 +258,8 @@ health-tracker/
 ├── reference_ranges.json       # 108 measurement reference ranges
 ├── db/
 │   ├── init.sql                # Schema + reference range seeds
-│   └── seed_sample_data.sql    # 3,600+ sample records
+│   ├── 02-seed.sql             # Minimal placeholder for second init script (committed)
+│   └── seed_sample_data.sql    # Optional large seed (gitignored; keep local only)
 ├── extractor/
 │   ├── Dockerfile
 │   ├── requirements.txt

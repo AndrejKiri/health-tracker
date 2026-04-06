@@ -1,0 +1,66 @@
+# Secrets & local env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / swap
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs & caches
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# Local databases & dumps (schema in db/*.sql stays tracked)
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+
+# Private sample seed (optional local file; not for GitHub)
+db/seed_sample_data.sql
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# User content: PDF pipeline (directories kept via .gitkeep)
+data/inbox/*
+!data/inbox/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/failed/*
+!data/failed/.gitkeep
+# Stray files directly under data/
+data/*.pdf
