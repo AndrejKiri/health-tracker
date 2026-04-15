@@ -70,7 +70,7 @@
         "hide": false,
         "iconColor": "#5794F2",
         "name": "Medical Events",
-        "rawQuery": "SELECT date as time, end_date as timeend, title as text, category || ' \u2014 ' || COALESCE(subcategory, '') || ': ' || COALESCE(description,'') as tags FROM events WHERE $__timeFilter(date) ORDER BY date",
+        "rawQuery": "SELECT date::timestamptz as time, end_date::timestamptz as timeend, title as text, category || ' \u2014 ' || COALESCE(subcategory, '') || ': ' || COALESCE(description,'') as tags FROM events WHERE $__timeFilter(date::timestamptz) ORDER BY date",
         "showIn": 0,
         "step": "60s",
         "type": "tags"
