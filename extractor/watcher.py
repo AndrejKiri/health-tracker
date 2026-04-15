@@ -8,7 +8,9 @@ Behaviour
 ---------
 - Uses watchdog's ``Observer`` to monitor the inbox directory.
 - On a new .pdf file event: waits 2 seconds (in case the file is still being
-  copied), then runs extraction.
+  copied), then submits the file to a bounded thread-pool executor.
+- At most MAX_WORKERS extractions run concurrently; additional files queue up
+  rather than spawning unbounded threads that would overwhelm Ollama.
 - Successfully processed files are moved to PROCESSED_DIR.
 - Files that fail extraction are moved to FAILED_DIR.
 - Handles SIGTERM and SIGINT for graceful shutdown.
@@ -19,10 +21,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import shutil
 import signal
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event, Thread
 
@@ -37,6 +39,14 @@ logger = logging.getLogger(__name__)
 # Gives in-progress copy operations time to finish.
 _COPY_SETTLE_SECONDS = 2.0
 
+# Maximum number of PDFs processed concurrently. Ollama is single-threaded;
+# more than a handful of concurrent requests just queue up inside Ollama and
+# risk hitting the 120s per-request timeout.
+_MAX_WORKERS = 3
+
+# Module-level executor shared across all watchdog events and the pre-scan.
+_executor = ThreadPoolExecutor(max_workers=_MAX_WORKERS, thread_name_prefix="extractor")
+
 
 # ---------------------------------------------------------------------------
 # Helper: ensure output directories exist
@@ -50,7 +60,7 @@ def _ensure_dirs() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Processing logic (runs in a daemon thread per file)
+# Processing logic (runs inside the thread pool)
 # ---------------------------------------------------------------------------
 
 
@@ -134,7 +144,7 @@ class _PDFEventHandler(FileSystemEventHandler):
         return path.lower().endswith(".pdf")
 
     def _handle(self, path: str) -> None:
-        """Schedule processing of a PDF in a daemon thread."""
+        """Submit PDF processing to the bounded thread pool."""
         if not self._is_pdf(path):
             return
 
@@ -153,8 +163,7 @@ class _PDFEventHandler(FileSystemEventHandler):
 
             _process_file(path)
 
-        thread = Thread(target=_delayed_process, daemon=True, name=f"proc-{Path(path).name}")
-        thread.start()
+        _executor.submit(_delayed_process)
 
     def on_created(self, event: FileCreatedEvent) -> None:  # type: ignore[override]
         if not event.is_directory:
@@ -171,18 +180,18 @@ class _PDFEventHandler(FileSystemEventHandler):
 
 
 def _scan_existing(stop_event: Event) -> None:
-    """Process any PDF files already present in WATCH_DIR at startup."""
+    """Submit any PDFs already present in WATCH_DIR to the thread pool."""
     inbox = Path(config.watch_dir)
     pdfs = list(inbox.glob("*.pdf")) + list(inbox.glob("*.PDF"))
     if pdfs:
         logger.info(
-            "Found %d existing PDF(s) in '%s' — processing…",
+            "Found %d existing PDF(s) in '%s' — submitting to processor…",
             len(pdfs), inbox,
         )
         for pdf in pdfs:
             if stop_event.is_set():
                 break
-            _process_file(str(pdf))
+            _executor.submit(_process_file, str(pdf))
 
 
 # ---------------------------------------------------------------------------
@@ -196,8 +205,8 @@ def start_watcher() -> None:
 
     Handles SIGTERM and SIGINT gracefully:
     - Stops the watchdog Observer.
-    - Allows in-flight processing threads to complete (daemon threads, so they
-      will be force-killed if the process exits before they finish).
+    - Shuts down the thread pool executor (waits for in-flight extractions
+      to finish before exiting).
     """
     _ensure_dirs()
 
@@ -212,7 +221,7 @@ def start_watcher() -> None:
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
 
-    # Process any files already in the inbox
+    # Submit any files already in the inbox without blocking the main loop
     pre_scan_thread = Thread(
         target=_scan_existing,
         args=(stop_event,),
@@ -227,8 +236,9 @@ def start_watcher() -> None:
     observer.start()
 
     logger.info(
-        "Watching '%s' for new PDF files (processed→'%s', failed→'%s').",
+        "Watching '%s' for new PDF files (max %d concurrent, processed→'%s', failed→'%s').",
         config.watch_dir,
+        _MAX_WORKERS,
         config.processed_dir,
         config.failed_dir,
     )
@@ -237,7 +247,8 @@ def start_watcher() -> None:
         while not stop_event.is_set():
             time.sleep(0.5)
     finally:
-        logger.info("Stopping observer…")
+        logger.info("Stopping observer and waiting for in-flight extractions…")
         observer.stop()
         observer.join(timeout=10)
+        _executor.shutdown(wait=True)
         logger.info("Watcher stopped.")
