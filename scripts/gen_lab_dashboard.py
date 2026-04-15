@@ -157,33 +157,50 @@ def make_table_panel(panel_id, category, measurements, x, y):
     The convertFieldType transformation converts the JSON string to a
     type Grafana can render as a sparkline cell.  This bypasses the
     broken timeSeriesTable transformation entirely.
+
+    Features:
+    - Sparkline shows last 1 year of data (fixed window, not dashboard range)
+    - Status column (H/L/OK) coloured red/orange/green vs reference range
+    - Clicking a metric name navigates to the detail dashboard
     """
     # Escape single quotes in category name for SQL
     cat_escaped = category.replace("'", "''")
 
     sql = (
+        # CTE gets the most recent value per metric efficiently
+        "WITH last_vals AS (\n"
+        "  SELECT DISTINCT ON (metric) metric, value\n"
+        "  FROM samples\n"
+        "  ORDER BY metric, time DESC\n"
+        ")\n"
         "SELECT\n"
         "    m.name AS \"Name\",\n"
         "    m.unit AS \"Unit\",\n"
+        # Sparkline: fixed 1-year window regardless of dashboard time range
         "    COALESCE(\n"
         "      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n"
         "       FROM samples s2\n"
         "       WHERE s2.metric = m.name\n"
-        "         AND $__timeFilter(s2.time)),\n"
+        "         AND s2.time >= NOW() - INTERVAL '1 year'),\n"
         "      '[]'\n"
         "    ) AS \"Trend\",\n"
-        "    (SELECT s3.value\n"
-        "     FROM samples s3\n"
-        "     WHERE s3.metric = m.name\n"
-        "     ORDER BY s3.time DESC\n"
-        "     LIMIT 1) AS \"Last\",\n"
-        "    rr.ref_low AS \"Ref Low\",\n"
+        "    lv.value AS \"Last\",\n"
+        # Status: compare last value against standard reference range
+        "    CASE\n"
+        "      WHEN lv.value IS NULL THEN NULL\n"
+        "      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n"
+        "      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n"
+        "      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n"
+        "      ELSE 'OK'\n"
+        "    END AS \"Status\",\n"
+        "    rr.ref_low  AS \"Ref Low\",\n"
         "    rr.ref_high AS \"Ref High\"\n"
         "FROM metrics m\n"
         "LEFT JOIN reference_ranges rr\n"
         "    ON rr.metric = m.name\n"
         "    AND rr.range_type = 'standard'\n"
         "    AND rr.sex IS NULL\n"
+        "LEFT JOIN last_vals lv ON lv.metric = m.name\n"
         f"WHERE m.category = '{cat_escaped}'\n"
         "ORDER BY m.sort_order"
     )
@@ -192,7 +209,7 @@ def make_table_panel(panel_id, category, measurements, x, y):
     h = max(n * 2 + 3, 6)
 
     overrides = [
-        # Trend column: render as sparkline
+        # Trend column: sparkline, fixed 1-year window
         {
             "matcher": {"id": "byName", "options": "Trend"},
             "properties": [
@@ -210,18 +227,69 @@ def make_table_panel(panel_id, category, measurements, x, y):
                 {"id": "custom.width", "value": 300},
             ],
         },
-        # Name column: fixed width
+        # Name column: links to detail dashboard
         {
             "matcher": {"id": "byName", "options": "Name"},
             "properties": [
-                {"id": "custom.width", "value": 200},
+                {"id": "custom.width", "value": 180},
+                {
+                    "id": "links",
+                    "value": [
+                        {
+                            "title": "Detail: ${__data.fields.Name}",
+                            "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                            "targetBlank": False,
+                        }
+                    ],
+                },
             ],
         },
         # Unit column: narrow
         {
             "matcher": {"id": "byName", "options": "Unit"},
+            "properties": [{"id": "custom.width", "value": 75}],
+        },
+        # Status column: coloured H (red) / L (orange) / OK (green)
+        {
+            "matcher": {"id": "byName", "options": "Status"},
+            "properties": [
+                {"id": "custom.width", "value": 60},
+                {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+                {
+                    "id": "mappings",
+                    "value": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "H":  {"text": "↑ H",  "color": "red",    "index": 0},
+                                "L":  {"text": "↓ L",  "color": "orange", "index": 1},
+                                "OK": {"text": "✓",    "color": "green",  "index": 2},
+                            },
+                        },
+                        {
+                            "type": "special",
+                            "options": {
+                                "match": "null",
+                                "result": {"text": "—", "color": "text", "index": 3},
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+        # Ref Low / Ref High: narrow, right-aligned
+        {
+            "matcher": {"id": "byName", "options": "Ref Low"},
             "properties": [
                 {"id": "custom.width", "value": 80},
+                {"id": "custom.align", "value": "right"},
+            ],
+        },
+        {
+            "matcher": {"id": "byName", "options": "Ref High"},
+            "properties": [
+                {"id": "custom.width", "value": 80},
+                {"id": "custom.align", "value": "right"},
             ],
         },
     ]
@@ -369,10 +437,230 @@ def build_dashboard():
     }
 
 
+def make_detail_dashboard():
+    """Generate a single-metric detail dashboard.
+
+    Linked from the 'Name' column of every table panel in the overview.
+    Shows: metric info (description, unit, reference range) + full timeseries
+    with reference range bands as a second series.
+    """
+    # ── Template variable: metric picker ──────────────────────────────────
+    metric_var = {
+        "type": "query",
+        "name": "metric",
+        "label": "Metric",
+        "datasource": DS,
+        "definition": "SELECT name FROM metrics ORDER BY sort_order, name",
+        "query": {
+            "query": "SELECT name FROM metrics ORDER BY sort_order, name",
+            "refId": "StandardVariableQuery",
+        },
+        "current": {"text": "Glucose", "value": "Glucose"},
+        "options": [],
+        "refresh": 1,
+        "includeAll": False,
+        "multi": False,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": False,
+    }
+
+    # ── Info panel: description + reference range ──────────────────────────
+    info_sql = (
+        "SELECT\n"
+        "    m.name AS \"Metric\",\n"
+        "    COALESCE(m.description, '—') AS \"Description\",\n"
+        "    COALESCE(m.unit, '—') AS \"Unit\",\n"
+        "    rr.ref_low  AS \"Ref Low\",\n"
+        "    rr.ref_high AS \"Ref High\"\n"
+        "FROM metrics m\n"
+        "LEFT JOIN reference_ranges rr\n"
+        "    ON rr.metric = m.name\n"
+        "    AND rr.range_type = 'standard'\n"
+        "    AND rr.sex IS NULL\n"
+        "WHERE m.name = '$metric'"
+    )
+
+    info_panel = {
+        "id": 1,
+        "title": "Metric Info",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+        "datasource": DS,
+        "targets": [
+            {
+                "datasource": DS,
+                "format": "table",
+                "rawQuery": True,
+                "rawSql": info_sql,
+                "refId": "Info",
+                "editorMode": "code",
+            }
+        ],
+        "transformations": [],
+        "fieldConfig": {
+            "defaults": {
+                "custom": {"align": "auto", "cellOptions": {"type": "auto"}},
+            },
+            "overrides": [
+                {
+                    "matcher": {"id": "byName", "options": "Metric"},
+                    "properties": [{"id": "custom.width", "value": 180}],
+                },
+                {
+                    "matcher": {"id": "byName", "options": "Description"},
+                    "properties": [
+                        {"id": "custom.width", "value": 700},
+                        {"id": "custom.inspect", "value": True},
+                    ],
+                },
+                {
+                    "matcher": {"id": "byName", "options": "Unit"},
+                    "properties": [{"id": "custom.width", "value": 80}],
+                },
+            ],
+        },
+        "options": {"showHeader": True, "cellHeight": "sm", "footer": {"show": False}},
+        "pluginVersion": "11.2.0",
+    }
+
+    # ── Timeseries panel: values + reference range flat lines ──────────────
+    values_sql = (
+        "SELECT s.time, s.value AS \"Value\"\n"
+        "FROM samples s\n"
+        "WHERE s.metric = '$metric'\n"
+        "  AND $__timeFilter(s.time)\n"
+        "ORDER BY s.time"
+    )
+
+    # Two-point flat lines for ref_low / ref_high across the data time span
+    refrange_sql = (
+        "SELECT t.time::timestamptz, rr.ref_low AS \"Ref Low\", rr.ref_high AS \"Ref High\"\n"
+        "FROM (\n"
+        "  SELECT MIN(time) AS time FROM samples WHERE metric = '$metric'\n"
+        "  UNION ALL\n"
+        "  SELECT MAX(time)          FROM samples WHERE metric = '$metric'\n"
+        ") t\n"
+        "CROSS JOIN (\n"
+        "  SELECT ref_low, ref_high FROM reference_ranges\n"
+        "  WHERE metric = '$metric' AND range_type = 'standard' AND sex IS NULL\n"
+        "  LIMIT 1\n"
+        ") rr\n"
+        "WHERE rr.ref_low IS NOT NULL OR rr.ref_high IS NOT NULL\n"
+        "ORDER BY t.time"
+    )
+
+    timeseries_panel = {
+        "id": 2,
+        "title": "$metric — historical values",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 4, "w": 24, "h": 18},
+        "datasource": DS,
+        "targets": [
+            {
+                "datasource": DS,
+                "format": "time_series",
+                "rawQuery": True,
+                "rawSql": values_sql,
+                "refId": "A",
+                "editorMode": "code",
+            },
+            {
+                "datasource": DS,
+                "format": "time_series",
+                "rawQuery": True,
+                "rawSql": refrange_sql,
+                "refId": "Ref",
+                "editorMode": "code",
+                "hide": False,
+            },
+        ],
+        "fieldConfig": {
+            "defaults": {
+                "custom": {
+                    "lineWidth": 2,
+                    "fillOpacity": 8,
+                    "pointSize": 5,
+                    "showPoints": "always",
+                    "spanNulls": False,
+                },
+                "color": {"mode": "palette-classic"},
+            },
+            "overrides": [
+                # Reference range lines: dashed, no points, semi-transparent
+                {
+                    "matcher": {"id": "byName", "options": "Ref Low"},
+                    "properties": [
+                        {"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}},
+                        {"id": "custom.lineWidth", "value": 1},
+                        {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}},
+                        {"id": "custom.showPoints", "value": "never"},
+                        {"id": "custom.fillOpacity", "value": 0},
+                    ],
+                },
+                {
+                    "matcher": {"id": "byName", "options": "Ref High"},
+                    "properties": [
+                        {"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}},
+                        {"id": "custom.lineWidth", "value": 1},
+                        {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}},
+                        {"id": "custom.showPoints", "value": "never"},
+                        {"id": "custom.fillOpacity", "value": 0},
+                    ],
+                },
+            ],
+        },
+        "options": {
+            "tooltip": {"mode": "multi", "sort": "none"},
+            "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "calcs": ["last", "min", "max", "mean"],
+            },
+        },
+        "pluginVersion": "11.2.0",
+    }
+
+    return {
+        "annotations": {"list": []},
+        "description": "Detail view for a single lab metric — description, full history, and reference range.",
+        "editable": True,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 0,
+        "id": None,
+        "links": [
+            {
+                "icon": "dashboard",
+                "title": "← Lab Results Overview",
+                "type": "link",
+                "url": "/d/lab-results-overview",
+                "tooltip": "Back to the full overview",
+            }
+        ],
+        "panels": [info_panel, timeseries_panel],
+        "schemaVersion": 39,
+        "tags": ["health", "lab-results"],
+        "templating": {"list": [metric_var]},
+        "time": {"from": "now-5y", "to": "now"},
+        "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]},
+        "timezone": "browser",
+        "title": "Lab Metric Detail",
+        "uid": "lab-metric-detail",
+        "version": 1,
+    }
+
+
 if __name__ == "__main__":
     import pathlib
-    out = pathlib.Path(__file__).resolve().parent.parent / "grafana" / "dashboards" / "lab-results-overview.json"
+    dashboards = pathlib.Path(__file__).resolve().parent.parent / "grafana" / "dashboards"
+
+    out = dashboards / "lab-results-overview.json"
     with open(out, "w") as f:
         json.dump(build_dashboard(), f, indent=2)
     total = sum(len(m) for _, m in CATEGORIES)
-    print(f"Generated {out} with {total} measurements across {len(CATEGORIES)} categories")
+    print(f"Generated {out} — {total} measurements across {len(CATEGORIES)} categories")
+
+    out2 = dashboards / "lab-metric-detail.json"
+    with open(out2, "w") as f:
+        json.dump(make_detail_dashboard(), f, indent=2)
+    print(f"Generated {out2}")

@@ -67,8 +67,8 @@
     },
     {
       "id": 2,
-      "title": "SQL Array Method: Metabolic Panel (sparkline table)",
-      "description": "Bypasses timeSeriesTable entirely. Uses array_to_json(array_agg()) in SQL to build sparkline arrays, then convertFieldType to render them.",
+      "title": "SQL Array Method: Metabolic Panel — with Status + 1-year sparklines",
+      "description": "Sparklines show last 1 year. Status column (H/L/OK) is coloured based on reference range. Name column links to detail dashboard.",
       "type": "table",
       "gridPos": { "x": 12, "y": 0, "w": 12, "h": 10 },
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
@@ -77,7 +77,7 @@
           "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value FROM samples ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name AND rr.range_type = 'standard' AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -121,13 +121,28 @@
           {
             "matcher": { "id": "byName", "options": "Name" },
             "properties": [
-              { "id": "custom.width", "value": 200 }
+              { "id": "custom.width", "value": 180 },
+              { "id": "links", "value": [{ "title": "Detail: ${__data.fields.Name}", "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}", "targetBlank": false }] }
             ]
           },
           {
             "matcher": { "id": "byName", "options": "Unit" },
+            "properties": [{ "id": "custom.width", "value": 75 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Status" },
             "properties": [
-              { "id": "custom.width", "value": 80 }
+              { "id": "custom.width", "value": 60 },
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": {
+                    "H":  { "text": "↑ H", "color": "red",    "index": 0 },
+                    "L":  { "text": "↓ L", "color": "orange", "index": 1 },
+                    "OK": { "text": "✓",   "color": "green",  "index": 2 }
+                  }
+                },
+                { "type": "special", "options": { "match": "null", "result": { "text": "—", "color": "text", "index": 3 } } }
+              ]}
             ]
           }
         ]

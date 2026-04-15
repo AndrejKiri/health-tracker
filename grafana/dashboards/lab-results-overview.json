@@ -99,7 +99,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Complete Blood Count'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Complete Blood Count'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -163,7 +163,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -175,7 +185,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -230,7 +326,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'WBC Differential (absolute)'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'WBC Differential (absolute)'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -294,7 +390,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -306,7 +412,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -361,7 +553,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'WBC Differential (%)'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'WBC Differential (%)'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -425,7 +617,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -437,7 +639,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -492,7 +780,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -556,7 +844,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -568,7 +866,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -623,7 +1007,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Liver Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Liver Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -687,7 +1071,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -699,7 +1093,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -754,7 +1234,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Lipid Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Lipid Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -818,7 +1298,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -830,7 +1320,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -885,7 +1461,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Thyroid'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Thyroid'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -949,7 +1525,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -961,7 +1547,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1016,7 +1688,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Cardiac Markers'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Cardiac Markers'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1080,7 +1752,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1092,7 +1774,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1147,7 +1915,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Iron Studies'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Iron Studies'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1211,7 +1979,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1223,7 +2001,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1278,7 +2142,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Coagulation'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Coagulation'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1342,7 +2206,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1354,7 +2228,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1409,7 +2369,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Inflammatory Markers'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Inflammatory Markers'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1473,7 +2433,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1485,7 +2455,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1540,7 +2596,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Endocrine'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Endocrine'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1604,7 +2660,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1616,7 +2682,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1671,7 +2823,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Vitamins'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Vitamins'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1735,7 +2887,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1747,7 +2909,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1802,7 +3050,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Other Chemistry'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Other Chemistry'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1866,7 +3114,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1878,7 +3136,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -1933,7 +3277,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Lymphocyte Subsets'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Lymphocyte Subsets'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -1997,7 +3341,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -2009,7 +3363,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -2064,7 +3504,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Blood Gas'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Blood Gas'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -2128,7 +3568,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -2140,7 +3590,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -2195,7 +3731,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Urinalysis & Other'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Urinalysis & Other'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -2259,7 +3795,17 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -2271,7 +3817,93 @@
             "properties": [
               {
                 "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }

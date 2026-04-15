@@ -1,0 +1,308 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Detail view for a single lab metric \u2014 description, full history, and reference range.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "icon": "dashboard",
+      "title": "\u2190 Lab Results Overview",
+      "type": "link",
+      "url": "/d/lab-results-overview",
+      "tooltip": "Back to the full overview"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Metric Info",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n    m.name AS \"Metric\",\n    COALESCE(m.description, '\u2014') AS \"Description\",\n    COALESCE(m.unit, '\u2014') AS \"Unit\",\n    rr.ref_low  AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.name = '$metric'",
+          "refId": "Info",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Metric"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Description"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 700
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 2,
+      "title": "$metric \u2014 historical values",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 18
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"Value\"\nFROM samples s\nWHERE s.metric = '$metric'\n  AND $__timeFilter(s.time)\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT t.time::timestamptz, rr.ref_low AS \"Ref Low\", rr.ref_high AS \"Ref High\"\nFROM (\n  SELECT MIN(time) AS time FROM samples WHERE metric = '$metric'\n  UNION ALL\n  SELECT MAX(time)          FROM samples WHERE metric = '$metric'\n) t\nCROSS JOIN (\n  SELECT ref_low, ref_high FROM reference_ranges\n  WHERE metric = '$metric' AND range_type = 'standard' AND sex IS NULL\n  LIMIT 1\n) rr\nWHERE rr.ref_low IS NOT NULL OR rr.ref_high IS NOT NULL\nORDER BY t.time",
+          "refId": "Ref",
+          "editorMode": "code",
+          "hide": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "pointSize": 5,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref Low"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ref High"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max",
+            "mean"
+          ]
+        }
+      },
+      "pluginVersion": "11.2.0"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "health",
+    "lab-results"
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "metric",
+        "label": "Metric",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "definition": "SELECT name FROM metrics ORDER BY sort_order, name",
+        "query": {
+          "query": "SELECT name FROM metrics ORDER BY sort_order, name",
+          "refId": "StandardVariableQuery"
+        },
+        "current": {
+          "text": "Glucose",
+          "value": "Glucose"
+        },
+        "options": [],
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-5y",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Lab Metric Detail",
+  "uid": "lab-metric-detail",
+  "version": 1
+}
