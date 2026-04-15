@@ -187,14 +187,17 @@ def insert_lab_results(
     with _conn() as conn:
         with conn.cursor() as cur:
             psycopg2.extras.execute_batch(cur, sql, rows, page_size=200)
-            inserted = cur.rowcount
+            # psycopg2 execute_batch() executes statements in page_size chunks.
+            # cur.rowcount reflects only the LAST chunk, not the total. There
+            # is no cheap way to get an exact inserted count without RETURNING.
+            # Log the attempted count; duplicates silently skipped by ON CONFLICT
+            # will not be double-inserted but won't be reported either.
 
-    # rowcount after execute_batch is the count of actually-inserted rows
-    # (skipped by ON CONFLICT DO NOTHING are not counted)
     logger.info(
-        "Inserted %d/%d lab result(s) from '%s'.", inserted, len(rows), source_file
+        "Attempted %d lab result insert(s) from '%s' (duplicates silently skipped).",
+        len(rows), source_file,
     )
-    return inserted
+    return len(rows)
 
 
 # ---------------------------------------------------------------------------
