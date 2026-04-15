@@ -4,16 +4,26 @@ Database operations for the health data extraction service.
 Uses psycopg2 with a simple connection pool (psycopg2.pool.ThreadedConnectionPool).
 All queries are parameterised to prevent SQL injection.
 
+Schema (Prometheus-inspired)
+----------------------------
+documents        — source lab reports (one row per PDF)
+metrics          — measurement definitions (name, category, unit, scale)
+reference_ranges — multi-dimensional thresholds (standard/optimal/critical × sex × age)
+samples          — time-series lab result data
+
 Public API
 ----------
 get_connection()                        — acquire a connection from the pool
 release_connection(conn)                — return a connection to the pool
 init_db()                               — create schema from init.sql
-insert_lab_results(results, source)     — bulk-insert LabResult rows
+insert_lab_results(results, source)     — bulk-insert into documents + samples
 insert_events(events, source)           — bulk-insert MedicalEvent rows
 log_processing(filename, status, error) — upsert a processing log row
 is_processed(filename)                  — check if filename hash already exists
-get_lab_results(...)                    — query lab_results with optional filters
+get_lab_results(...)                    — query samples with optional filters
+seed_reference_ranges(ranges)           — upsert metrics + reference_ranges
+check_flags_against_references(results) — cross-check LLM flags vs stored ranges
+list_processed_files()                  — list processing log entries
 """
 
 from __future__ import annotations
@@ -139,7 +149,44 @@ def init_db() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Lab results
+# Documents (find or create)
+# ---------------------------------------------------------------------------
+
+
+def _find_or_create_document(
+    cur: psycopg2.extensions.cursor,
+    filename: str,
+    date,
+) -> int:
+    """
+    Return the document ID for *filename*, creating a row if needed.
+
+    Must be called inside an open transaction (cursor from a managed conn).
+    """
+    # Try INSERT first (common path for new files)
+    cur.execute(
+        """
+        INSERT INTO documents (date, filename)
+        VALUES (%s, %s)
+        ON CONFLICT (filename) DO NOTHING
+        RETURNING id
+        """,
+        (date, filename),
+    )
+    row = cur.fetchone()
+    if row:
+        return row[0]
+
+    # Already existed — fetch its id
+    cur.execute(
+        "SELECT id FROM documents WHERE filename = %s",
+        (filename,),
+    )
+    return cur.fetchone()[0]
+
+
+# ---------------------------------------------------------------------------
+# Lab results → documents + metrics + samples
 # ---------------------------------------------------------------------------
 
 
@@ -148,7 +195,7 @@ def insert_lab_results(
     source_file: str,
 ) -> int:
     """
-    Bulk-insert LabResult objects into the lab_results table.
+    Bulk-insert LabResult objects into documents + samples.
 
     Parameters
     ----------
@@ -157,51 +204,68 @@ def insert_lab_results(
 
     Returns
     -------
-    int : Number of rows inserted.
+    int : Number of sample rows attempted (duplicates silently skipped).
     """
     if not results:
         return 0
 
-    rows = [
-        (
-            r.date,
-            r.category,
-            r.measurement,
-            r.value,
-            r.value_text,
-            r.unit,
-            r.flag,
-            source_file,
-        )
-        for r in results
-    ]
-
-    sql = """
-        INSERT INTO lab_results
-            (date, category, measurement, value, value_text, unit, flag, source_file)
-        VALUES
-            (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (date, measurement, source_file) DO NOTHING
-    """
-
     with _conn() as conn:
         with conn.cursor() as cur:
-            psycopg2.extras.execute_batch(cur, sql, rows, page_size=200)
-            # psycopg2 execute_batch() executes statements in page_size chunks.
-            # cur.rowcount reflects only the LAST chunk, not the total. There
-            # is no cheap way to get an exact inserted count without RETURNING.
-            # Log the attempted count; duplicates silently skipped by ON CONFLICT
-            # will not be double-inserted but won't be reported either.
+            # 1. Find or create the document
+            earliest_date = min(r.date for r in results)
+            doc_id = _find_or_create_document(cur, source_file, earliest_date)
+
+            # 2. Ensure all metrics exist (upsert unknown measurements)
+            unique_metrics = {
+                (r.measurement, r.category, r.unit) for r in results
+            }
+            metric_rows = [
+                (name, name, category, unit)
+                for name, category, unit in unique_metrics
+            ]
+            psycopg2.extras.execute_batch(
+                cur,
+                """
+                INSERT INTO metrics (name, display_name, category, unit)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (name) DO NOTHING
+                """,
+                metric_rows,
+                page_size=200,
+            )
+
+            # 3. Insert samples
+            sample_rows = [
+                (
+                    r.date,
+                    r.measurement,
+                    r.value,
+                    r.value_text,
+                    r.flag,
+                    doc_id,
+                )
+                for r in results
+            ]
+            psycopg2.extras.execute_batch(
+                cur,
+                """
+                INSERT INTO samples (time, metric, value, value_text, flag, document_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (time, metric, document_id) DO NOTHING
+                """,
+                sample_rows,
+                page_size=200,
+            )
 
     logger.info(
-        "Attempted %d lab result insert(s) from '%s' (duplicates silently skipped).",
-        len(rows), source_file,
+        "Attempted %d sample insert(s) from '%s' (duplicates silently skipped).",
+        len(results), source_file,
     )
-    return len(rows)
+    return len(results)
 
 
 # ---------------------------------------------------------------------------
-# Medical events
+# Medical events (unchanged — same table)
 # ---------------------------------------------------------------------------
 
 
@@ -210,7 +274,7 @@ def insert_events(
     source_file: str,
 ) -> int:
     """
-    Bulk-insert MedicalEvent objects into the medical_events table.
+    Bulk-insert MedicalEvent objects into the events table.
 
     Parameters
     ----------
@@ -255,7 +319,7 @@ def insert_events(
 
 
 # ---------------------------------------------------------------------------
-# Processing log
+# Processing log (unchanged — same table)
 # ---------------------------------------------------------------------------
 
 
@@ -314,17 +378,19 @@ def is_processed(filename: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Reference ranges seed
+# Reference ranges seed → metrics + reference_ranges
 # ---------------------------------------------------------------------------
 
 
 def seed_reference_ranges(ranges: list[dict]) -> int:
     """
-    Insert or update reference range rows from a list of dicts.
+    Insert or update metric definitions and reference ranges.
 
     Parameters
     ----------
     ranges : list of dicts matching the reference_ranges.json schema.
+             Expected keys: measurement, unit, reference_low, reference_high,
+             scale, category.
 
     Returns
     -------
@@ -333,36 +399,57 @@ def seed_reference_ranges(ranges: list[dict]) -> int:
     if not ranges:
         return 0
 
-    sql = """
-        INSERT INTO reference_ranges
-            (measurement, unit, reference_low, reference_high, scale, category)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        ON CONFLICT (measurement)
-        DO UPDATE SET
-            unit            = EXCLUDED.unit,
-            reference_low   = EXCLUDED.reference_low,
-            reference_high  = EXCLUDED.reference_high,
-            scale           = EXCLUDED.scale,
-            category        = EXCLUDED.category
-    """
-    rows = [
+    # 1. Upsert metrics
+    metric_rows = [
         (
             r["measurement"],
-            r.get("unit", ""),
-            r.get("reference_low"),
-            r.get("reference_high"),
-            r.get("scale", "linear"),
+            r["measurement"],
             r.get("category", "Other"),
+            r.get("unit", ""),
+            r.get("scale", "linear"),
         )
         for r in ranges
     ]
+    metrics_sql = """
+        INSERT INTO metrics (name, display_name, category, unit, scale)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (name)
+        DO UPDATE SET
+            unit     = EXCLUDED.unit,
+            scale    = EXCLUDED.scale,
+            category = EXCLUDED.category
+    """
+
+    # 2. Upsert reference ranges (standard, sex-unspecified)
+    ref_rows = [
+        (
+            r["measurement"],
+            "standard",
+            r.get("reference_low"),
+            r.get("reference_high"),
+        )
+        for r in ranges
+        if r.get("reference_low") is not None or r.get("reference_high") is not None
+    ]
+    ref_sql = """
+        INSERT INTO reference_ranges (metric, range_type, ref_low, ref_high)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (metric, range_type, COALESCE(sex, ''), COALESCE(age_min, -1), COALESCE(age_max, -1))
+        DO UPDATE SET
+            ref_low  = EXCLUDED.ref_low,
+            ref_high = EXCLUDED.ref_high
+    """
 
     with _conn() as conn:
         with conn.cursor() as cur:
-            psycopg2.extras.execute_batch(cur, sql, rows, page_size=200)
+            psycopg2.extras.execute_batch(cur, metrics_sql, metric_rows, page_size=200)
+            psycopg2.extras.execute_batch(cur, ref_sql, ref_rows, page_size=200)
 
-    logger.info("Seeded %d reference range(s).", len(rows))
-    return len(rows)
+    logger.info(
+        "Seeded %d metric(s) and %d reference range(s).",
+        len(metric_rows), len(ref_rows),
+    )
+    return len(metric_rows)
 
 
 # ---------------------------------------------------------------------------
@@ -383,10 +470,10 @@ def get_lab_results(
 
     Parameters
     ----------
-    measurement : str | None — exact measurement name filter.
+    measurement : str | None — exact metric name filter.
     category    : str | None — exact category filter.
-    start_date  : date | str | None — inclusive lower bound on date.
-    end_date    : date | str | None — inclusive upper bound on date.
+    start_date  : date | str | None — inclusive lower bound.
+    end_date    : date | str | None — inclusive upper bound.
 
     Returns
     -------
@@ -396,25 +483,28 @@ def get_lab_results(
     params: list = []
 
     if measurement:
-        conditions.append("measurement = %s")
+        conditions.append("s.metric = %s")
         params.append(measurement)
     if category:
-        conditions.append("category = %s")
+        conditions.append("m.category = %s")
         params.append(category)
     if start_date:
-        conditions.append("date >= %s")
+        conditions.append("s.time >= %s")
         params.append(start_date)
     if end_date:
-        conditions.append("date <= %s")
+        conditions.append("s.time <= %s")
         params.append(end_date)
 
     where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     sql = f"""
-        SELECT id, date, category, measurement, value, value_text,
-               unit, flag, source_file
-        FROM lab_results
+        SELECT d.id, s.time AS date, m.category, s.metric AS measurement,
+               s.value, s.value_text, m.unit, s.flag,
+               d.filename AS source_file
+        FROM samples s
+        JOIN metrics m ON s.metric = m.name
+        JOIN documents d ON s.document_id = d.id
         {where_clause}
-        ORDER BY date DESC, measurement ASC
+        ORDER BY s.time DESC, s.metric ASC
     """
 
     with _conn() as conn:
@@ -426,7 +516,7 @@ def get_lab_results(
 
 
 # ---------------------------------------------------------------------------
-# List processed files
+# List processed files (unchanged — same table)
 # ---------------------------------------------------------------------------
 
 
@@ -468,11 +558,12 @@ def check_flags_against_references(results: list) -> None:
     measurements = list({r.measurement for r in results})
     placeholders = ", ".join(["%s"] * len(measurements))
     sql = f"""
-        SELECT measurement, reference_low, reference_high
+        SELECT metric AS measurement, ref_low AS reference_low, ref_high AS reference_high
         FROM reference_ranges
-        WHERE measurement IN ({placeholders})
-          AND reference_low IS NOT NULL
-          AND reference_high IS NOT NULL
+        WHERE metric IN ({placeholders})
+          AND ref_low IS NOT NULL
+          AND ref_high IS NOT NULL
+          AND range_type = 'standard'
     """
 
     with _conn() as conn:
