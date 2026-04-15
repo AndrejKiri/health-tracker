@@ -2,18 +2,18 @@ services:
   postgres:
     image: postgres:16
     container_name: health_postgres
-    ports:
-      - "5432:5432"
+    # No host port binding — only reachable inside the Docker network.
+    # Connect locally with: docker compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./db/02-post-schema-placeholder.sql:/docker-entrypoint-initdb.d/02-post-schema-placeholder.sql
     environment:
-      POSTGRES_DB: health_tracker
-      POSTGRES_USER: health
-      POSTGRES_PASSWORD: health
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U health -d health_tracker"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,8 +22,7 @@ services:
   ollama:
     image: ollama/ollama:0.3.6
     container_name: health_ollama
-    ports:
-      - "11434:11434"
+    # No host port binding — only reachable inside the Docker network.
     volumes:
       - ollama_data:/root/.ollama
     deploy:
@@ -48,8 +47,11 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: health
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/health-timeline.json
+      # Expose DB credentials so datasource.yml can reference them via ${VAR}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,11 +74,11 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: health_tracker
-      DB_USER: health
-      DB_PASSWORD: health
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: llama3.1:8b
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
       WATCH_DIR: /data/inbox
       PROCESSED_DIR: /data/processed
       FAILED_DIR: /data/failed

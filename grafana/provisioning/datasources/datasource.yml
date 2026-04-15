@@ -5,9 +5,9 @@ datasources:
     uid: postgres
     url: postgres:5432
     database: health_tracker
-    user: health
+    user: ${POSTGRES_USER}
     secureJsonData:
-      password: health
+      password: ${POSTGRES_PASSWORD}
     jsonData:
       sslmode: disable
       postgresVersion: 1600
