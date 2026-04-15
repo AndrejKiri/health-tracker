@@ -107,10 +107,11 @@ echo "Backup complete: ${OUTPUT_FILE} (${SIZE})"
 # Rotate old backups
 # ---------------------------------------------------------------------------
 if [[ "${KEEP}" -gt 0 ]]; then
-    # List backups matching our naming pattern, oldest first
-    mapfile -t ALL_BACKUPS < <(
-        ls -1t "${OUTPUT_DIR}"/health_tracker_*.sql 2>/dev/null || true
-    )
+    # List backups matching our naming pattern, newest first
+    ALL_BACKUPS=()
+    while IFS= read -r f; do
+        ALL_BACKUPS+=("$f")
+    done < <(ls -1t "${OUTPUT_DIR}"/health_tracker_*.sql 2>/dev/null || true)
     TOTAL="${#ALL_BACKUPS[@]}"
     if [[ "${TOTAL}" -gt "${KEEP}" ]]; then
         DELETE_COUNT=$(( TOTAL - KEEP ))
