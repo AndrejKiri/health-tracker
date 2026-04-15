@@ -190,8 +190,8 @@ def _cmd_seed(args: argparse.Namespace) -> None:
 
     # The canonical path for the reference file inside the container
     candidates = [
+        Path("/app/reference_ranges.json"),
         Path("/app/extractor/reference_ranges.json"),
-        Path("/home/user/workspace/health-tracker/reference_ranges.json"),
         Path("reference_ranges.json"),
     ]
 
