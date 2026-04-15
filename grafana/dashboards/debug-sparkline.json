@@ -77,7 +77,7 @@
           "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value FROM samples ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name AND rr.range_type = 'standard' AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value FROM samples ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    m.description AS \"Description\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name AND rr.range_type = 'standard' AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -143,6 +143,13 @@
                 },
                 { "type": "special", "options": { "match": "null", "result": { "text": "—", "color": "text", "index": 3 } } }
               ]}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Description" },
+            "properties": [
+              { "id": "custom.width", "value": 60 },
+              { "id": "custom.inspect", "value": true }
             ]
           }
         ]

@@ -193,8 +193,7 @@ def make_table_panel(panel_id, category, measurements, x, y):
         "      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n"
         "      ELSE 'OK'\n"
         "    END AS \"Status\",\n"
-        "    rr.ref_low  AS \"Ref Low\",\n"
-        "    rr.ref_high AS \"Ref High\"\n"
+        "    m.description AS \"Description\"\n"
         "FROM metrics m\n"
         "LEFT JOIN reference_ranges rr\n"
         "    ON rr.metric = m.name\n"
@@ -277,19 +276,12 @@ def make_table_panel(panel_id, category, measurements, x, y):
                 },
             ],
         },
-        # Ref Low / Ref High: narrow, right-aligned
+        # Description: truncated preview; click opens inspect drawer with full text
         {
-            "matcher": {"id": "byName", "options": "Ref Low"},
+            "matcher": {"id": "byName", "options": "Description"},
             "properties": [
-                {"id": "custom.width", "value": 80},
-                {"id": "custom.align", "value": "right"},
-            ],
-        },
-        {
-            "matcher": {"id": "byName", "options": "Ref High"},
-            "properties": [
-                {"id": "custom.width", "value": 80},
-                {"id": "custom.align", "value": "right"},
+                {"id": "custom.width", "value": 60},
+                {"id": "custom.inspect", "value": True},
             ],
         },
     ]
