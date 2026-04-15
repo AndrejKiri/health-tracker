@@ -17,6 +17,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
+      - frontend
     restart: unless-stopped
 
   ollama:
@@ -35,6 +38,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    networks:
+      - backend
     restart: unless-stopped
 
   grafana:
@@ -55,6 +60,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - frontend
     restart: unless-stopped
 
   extractor:
@@ -85,9 +92,20 @@ services:
       WATCH_DIR: /data/inbox
       PROCESSED_DIR: /data/processed
       FAILED_DIR: /data/failed
+    networks:
+      - backend
     restart: unless-stopped
 
 volumes:
   postgres_data:
   grafana_data:
   ollama_data:
+
+# backend: extractor + ollama + postgres
+# frontend: grafana + postgres
+# Grafana cannot reach Ollama; extractor cannot reach Grafana.
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
