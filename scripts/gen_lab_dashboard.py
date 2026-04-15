@@ -452,10 +452,7 @@ def make_detail_dashboard():
         "label": "Metric",
         "datasource": DS,
         "definition": "SELECT name FROM metrics ORDER BY sort_order, name",
-        "query": {
-            "query": "SELECT name FROM metrics ORDER BY sort_order, name",
-            "refId": "StandardVariableQuery",
-        },
+        "query": "SELECT name FROM metrics ORDER BY sort_order, name",
         "current": {"text": "Glucose", "value": "Glucose"},
         "options": [],
         "refresh": 1,
