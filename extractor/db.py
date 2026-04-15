@@ -187,14 +187,17 @@ def insert_lab_results(
     with _conn() as conn:
         with conn.cursor() as cur:
             psycopg2.extras.execute_batch(cur, sql, rows, page_size=200)
-            inserted = cur.rowcount
+            # psycopg2 execute_batch() executes statements in page_size chunks.
+            # cur.rowcount reflects only the LAST chunk, not the total. There
+            # is no cheap way to get an exact inserted count without RETURNING.
+            # Log the attempted count; duplicates silently skipped by ON CONFLICT
+            # will not be double-inserted but won't be reported either.
 
-    # rowcount after execute_batch is the count of actually-inserted rows
-    # (skipped by ON CONFLICT DO NOTHING are not counted)
     logger.info(
-        "Inserted %d/%d lab result(s) from '%s'.", inserted, len(rows), source_file
+        "Attempted %d lab result insert(s) from '%s' (duplicates silently skipped).",
+        len(rows), source_file,
     )
-    return inserted
+    return len(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -438,3 +441,80 @@ def list_processed_files() -> list[dict]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql)
             return [dict(r) for r in cur.fetchall()]
+
+
+# ---------------------------------------------------------------------------
+# Flag cross-check
+# ---------------------------------------------------------------------------
+
+
+def check_flags_against_references(results: list) -> None:
+    """
+    Compare the LLM-extracted flag on each LabResult against the stored
+    reference range and emit a WARNING for any disagreement.
+
+    This does NOT modify or reject the results — they are stored as-is
+    since the lab's own flag is authoritative. The warning exists to
+    surface cases where the LLM misread a flag or OCR introduced noise.
+
+    Parameters
+    ----------
+    results : list[LabResult]
+        Validated LabResult objects, typically right before DB insertion.
+    """
+    if not results:
+        return
+
+    measurements = list({r.measurement for r in results})
+    placeholders = ", ".join(["%s"] * len(measurements))
+    sql = f"""
+        SELECT measurement, reference_low, reference_high
+        FROM reference_ranges
+        WHERE measurement IN ({placeholders})
+          AND reference_low IS NOT NULL
+          AND reference_high IS NOT NULL
+    """
+
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, measurements)
+            ref_map: dict = {row["measurement"]: row for row in cur.fetchall()}
+
+    # Surface measurements that have no stored reference range at all — helpful
+    # when new tests appear in a report that haven't been seeded yet.
+    no_ref = [m for m in measurements if m not in ref_map]
+    if no_ref:
+        logger.debug(
+            "No reference range found for %d measurement(s); flag cross-check "
+            "skipped for: %s",
+            len(no_ref),
+            ", ".join(sorted(no_ref)),
+        )
+
+    for r in results:
+        if r.value is None:
+            continue
+        ref = ref_map.get(r.measurement)
+        if ref is None:
+            continue
+
+        if r.value > ref["reference_high"]:
+            expected = "H"
+        elif r.value < ref["reference_low"]:
+            expected = "L"
+        else:
+            expected = None
+
+        if expected != r.flag:
+            logger.warning(
+                "Flag mismatch for %s (value=%.3g %s): "
+                "LLM extracted flag=%r, reference range [%.3g–%.3g] suggests %r. "
+                "Storing LLM flag as-is.",
+                r.measurement,
+                r.value,
+                getattr(r, "unit", ""),
+                r.flag,
+                ref["reference_low"],
+                ref["reference_high"],
+                expected,
+            )

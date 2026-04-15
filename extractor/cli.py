@@ -101,7 +101,7 @@ async def _cmd_extract(args: argparse.Namespace) -> None:
 
 async def _cmd_import(args: argparse.Namespace) -> None:
     """Extract a PDF and write results to the database."""
-    from .db import insert_events, insert_lab_results, is_processed, log_processing
+    from .db import check_flags_against_references, insert_events, insert_lab_results, is_processed, log_processing
     from .schema import LabResult, MedicalEvent
 
     pdf_path = args.pdf_path
@@ -122,6 +122,7 @@ async def _cmd_import(args: argparse.Namespace) -> None:
         lab_results = [LabResult.model_validate(r) for r in result["lab_results"]]
         events = [MedicalEvent.model_validate(e) for e in result["events"]]
 
+        check_flags_against_references(lab_results)
         insert_lab_results(lab_results, filename)
         insert_events(events, filename)
         log_processing(filename, "success")

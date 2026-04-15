@@ -12,6 +12,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -26,6 +30,9 @@ services:
     image: ollama/ollama:0.3.6
     container_name: health_ollama
     # No host port binding — only reachable inside the Docker network.
+    # Before first use, pull the model:
+    #   docker compose exec ollama ollama pull llama3.1:8b
+    # Subsequent starts reuse the volume; no re-download needed.
     volumes:
       - ollama_data:/root/.ollama
     deploy:
@@ -33,7 +40,10 @@ services:
         limits:
           memory: 6G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      # Use the ollama binary (always present) instead of curl (may be absent
+      # in future minimal base images). `ollama list` returns exit 0 when the
+      # daemon is up and its API is reachable.
+      test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -57,6 +67,10 @@ services:
       # Expose DB credentials so datasource.yml can reference them via ${VAR}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     depends_on:
       postgres:
         condition: service_healthy

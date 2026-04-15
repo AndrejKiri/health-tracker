@@ -117,7 +117,7 @@ INSERT INTO reference_ranges (measurement, category, unit, reference_low, refere
   ('Direct Bilirubin', 'Liver Panel', 'mg/dL', 0, 0.2, 'linear'),
   ('ESR', 'Inflammatory Markers', 'mm/h', 0, 15, 'linear'),
   ('Eosinophils %', 'WBC Differential (%)', '%', 1, 4, 'linear'),
-  ('Ferritin', 'Iron Studies', 'ng/mL', 38, 380, 'linear'),
+  ('Ferritin', 'Iron Studies', 'ng/mL', 38, 380, 'linear'),  -- male range; see note above
   ('Fibrinogen', 'Coagulation', 'mg/dL', NULL, NULL, 'linear'),
   ('Folate', 'Vitamins', 'ng/mL', NULL, NULL, 'linear'),
   ('Free T3', 'Thyroid', 'pg/mL', 2.3, 4.2, 'linear'),
@@ -133,10 +133,18 @@ ON CONFLICT (measurement) DO UPDATE SET
   reference_high = EXCLUDED.reference_high,
   scale = EXCLUDED.scale;
 
+-- NOTE: Hematocrit, Hemoglobin, RBC, and Ferritin reference ranges below are
+-- for adult males. Female reference ranges differ substantially:
+--   Hematocrit   F: 36–46 %         M: 41–53 %
+--   Hemoglobin   F: 12.0–15.5 g/dL  M: 13.5–17.7 g/dL
+--   RBC          F: 3.9–5.2 x10E12/L M: 4.5–5.5 x10E12/L
+--   Ferritin     F: 12–150 ng/mL    M: 38–380 ng/mL
+-- A future enhancement should add a `sex` column to this table and store
+-- separate rows per sex so the cross-check logic can select the correct range.
 INSERT INTO reference_ranges (measurement, category, unit, reference_low, reference_high, scale) VALUES
   ('HDL Cholesterol', 'Lipid Panel', 'mg/dL', 40, 60, 'linear'),
-  ('Hematocrit', 'Complete Blood Count', '%', 41, 53, 'linear'),
-  ('Hemoglobin', 'Complete Blood Count', 'g/dL', 13.5, 17.7, 'linear'),
+  ('Hematocrit', 'Complete Blood Count', '%', 41, 53, 'linear'),   -- male range; see note above
+  ('Hemoglobin', 'Complete Blood Count', 'g/dL', 13.5, 17.7, 'linear'),  -- male range; see note above
   ('Hemoglobin A1c', 'Other Chemistry', '%', 4, 5.6, 'linear'),
   ('IL-6', 'Inflammatory Markers', 'pg/mL', NULL, NULL, 'logarithmic'),
   ('INR', 'Coagulation', '', 0.8, 1.2, 'linear'),
@@ -168,7 +176,7 @@ INSERT INTO reference_ranges (measurement, category, unit, reference_low, refere
   ('Platelets', 'Complete Blood Count', 'x10E9/L', 150, 400, 'linear'),
   ('Potassium', 'Metabolic Panel', 'mmol/L', 3.5, 5.1, 'linear'),
   ('Preliminary ANC', 'WBC Differential (absolute)', 'x10E9/L', NULL, NULL, 'linear'),
-  ('RBC', 'Complete Blood Count', 'x10E12/L', 4.5, 5.5, 'linear'),
+  ('RBC', 'Complete Blood Count', 'x10E12/L', 4.5, 5.5, 'linear'),  -- male range; see note above
   ('RDW', 'Complete Blood Count', '%', 11.5, 14.5, 'linear'),
   ('Reticulocyte Count', 'Other', 'x10E9/L', NULL, NULL, 'linear'),
   ('Sodium', 'Metabolic Panel', 'mmol/L', 136, 145, 'linear'),
@@ -197,6 +205,12 @@ INSERT INTO reference_ranges (measurement, category, unit, reference_low, refere
   ('Vitamin B12', 'Vitamins', 'pg/mL', 200, 900, 'linear'),
   ('Vitamin D', 'Vitamins', 'ng/mL', 30, 100, 'linear'),
   ('WBC', 'Complete Blood Count', 'x10E9/L', 3.4, 10, 'linear'),
+  -- eGFR: reference_low/high intentionally NULL.
+  -- CKD staging uses bands (≥90 G1, 60–89 G2, 45–59 G3a, …) not a single range.
+  -- The clinical threshold for "normal" is ≥60 mL/min/1.73m², but eGFR also
+  -- declines with age (~1 mL/min/1.73m² per year after 40), so a single numeric
+  -- bound would generate false positives in older patients.  The LLM's flag
+  -- from the original lab report is therefore the best available signal.
   ('eGFR', 'Metabolic Panel', '', NULL, NULL, 'linear'),
   ('hsCRP', 'Inflammatory Markers', 'mg/L', 0, 1, 'logarithmic'),
   ('pH', 'Blood Gas', '', NULL, NULL, 'linear')
