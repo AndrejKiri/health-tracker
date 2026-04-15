@@ -4,7 +4,7 @@ datasources:
     type: grafana-postgresql-datasource
     uid: postgres
     url: postgres:5432
-    database: health_tracker
+    database: ${POSTGRES_DB}
     user: ${POSTGRES_USER}
     secureJsonData:
       password: ${POSTGRES_PASSWORD}

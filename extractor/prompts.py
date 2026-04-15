@@ -307,6 +307,7 @@ Expected output:
   "lab_results": [
     {{"date": "2022-11-10", "category": "Other", "measurement": "Specific Gravity, Urine", "value": 1.015, "value_text": null, "unit": "", "flag": null}},
     {{"date": "2022-11-10", "category": "Blood Gas", "measurement": "pH", "value": 6.0, "value_text": null, "unit": "", "flag": null}},
+    {{"date": "2022-11-10", "category": "Other", "measurement": "Glucose, Urine", "value": null, "value_text": "Negative", "unit": "mg/dL", "flag": null}},
     {{"date": "2022-11-10", "category": "Other", "measurement": "Ketones, Urine", "value": null, "value_text": "Trace", "unit": "mg/dL", "flag": null}},
     {{"date": "2022-11-10", "category": "Thyroid", "measurement": "TSH", "value": 2.45, "value_text": null, "unit": "mIU/L", "flag": null}},
     {{"date": "2022-11-10", "category": "Thyroid", "measurement": "Free T4", "value": 1.22, "value_text": null, "unit": "ng/dL", "flag": null}},
@@ -341,12 +342,14 @@ value_text to the raw string if the text is present but unparseable.
 # User prompt template
 # ---------------------------------------------------------------------------
 
-_USER_TEMPLATE = """\
+_USER_TEMPLATE_PREFIX = """\
 Extract all lab results and medical events from the following clinical \
 document text.
 
 <document>
-{text}
+"""
+
+_USER_TEMPLATE_SUFFIX = """
 </document>
 """
 
@@ -365,4 +368,7 @@ def build_user_prompt(text: str) -> str:
     str
         Formatted user prompt ready to send to the LLM.
     """
-    return _USER_TEMPLATE.format(text=text)
+    # str.format() is intentionally avoided here: PDF text may contain
+    # curly-brace patterns (e.g. "{NR}", "{1.5}") that would cause a
+    # KeyError or ValueError.  Plain concatenation is safe for any input.
+    return _USER_TEMPLATE_PREFIX + text + _USER_TEMPLATE_SUFFIX

@@ -64,7 +64,8 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/health-timeline.json
-      # Expose DB credentials so datasource.yml can reference them via ${VAR}
+      # Expose DB connection details so datasource.yml can reference them via ${VAR}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     deploy:
@@ -106,6 +107,13 @@ services:
       WATCH_DIR: /data/inbox
       PROCESSED_DIR: /data/processed
       FAILED_DIR: /data/failed
+    deploy:
+      resources:
+        limits:
+          # OCR (Tesseract + pdf2image) can spike to ~300–400 MB per page;
+          # with MAX_WORKERS=3 concurrent jobs that approaches 1.5 GB in the
+          # worst case.  2 G gives headroom without hoarding host RAM.
+          memory: 2G
     networks:
       - backend
     restart: unless-stopped

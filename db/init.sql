@@ -105,7 +105,7 @@ INSERT INTO reference_ranges (measurement, category, unit, reference_low, refere
   ('CD4/CD8 Ratio', 'Lymphocyte Subsets', 'ratio', NULL, NULL, 'linear'),
   ('CD8 T Cells %', 'Lymphocyte Subsets', '% Lymphs', NULL, NULL, 'linear'),
   ('CD8 T Cells Abs', 'Lymphocyte Subsets', 'x10E6/L', NULL, NULL, 'linear'),
-  ('CK', 'Cardiac Markers', 'U/L', 44, 196, 'linear'),
+  ('CK', 'Cardiac Markers', 'U/L', 44, 196, 'linear'),  -- male range; see note above
   ('CK-MB', 'Cardiac Markers', 'ug/L', NULL, NULL, 'linear'),
   ('CO2', 'Metabolic Panel', 'mmol/L', 20, 32, 'linear'),
   ('CRP', 'Inflammatory Markers', 'mg/L', 0, 5, 'logarithmic'),
@@ -133,12 +133,13 @@ ON CONFLICT (measurement) DO UPDATE SET
   reference_high = EXCLUDED.reference_high,
   scale = EXCLUDED.scale;
 
--- NOTE: Hematocrit, Hemoglobin, RBC, and Ferritin reference ranges below are
--- for adult males. Female reference ranges differ substantially:
---   Hematocrit   F: 36–46 %         M: 41–53 %
---   Hemoglobin   F: 12.0–15.5 g/dL  M: 13.5–17.7 g/dL
+-- NOTE: Several reference ranges below are for adult males only.
+-- Female reference ranges differ substantially:
+--   Hematocrit   F: 36–46 %          M: 41–53 %
+--   Hemoglobin   F: 12.0–15.5 g/dL   M: 13.5–17.7 g/dL
 --   RBC          F: 3.9–5.2 x10E12/L M: 4.5–5.5 x10E12/L
---   Ferritin     F: 12–150 ng/mL    M: 38–380 ng/mL
+--   Ferritin     F: 12–150 ng/mL     M: 38–380 ng/mL
+--   CK           F: 26–140 U/L       M: 44–196 U/L
 -- A future enhancement should add a `sex` column to this table and store
 -- separate rows per sex so the cross-check logic can select the correct range.
 INSERT INTO reference_ranges (measurement, category, unit, reference_low, reference_high, scale) VALUES
