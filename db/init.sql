@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS pdf_processing_log (
     records_extracted INTEGER DEFAULT 0
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lab_result
+    ON lab_results (date, measurement, source_file);
+
 CREATE INDEX IF NOT EXISTS idx_lab_results_measurement ON lab_results (measurement);
 CREATE INDEX IF NOT EXISTS idx_lab_results_category ON lab_results (category);
 CREATE INDEX IF NOT EXISTS idx_lab_results_date ON lab_results (date);

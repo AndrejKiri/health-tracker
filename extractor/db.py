@@ -177,18 +177,20 @@ def insert_lab_results(
             (date, category, measurement, value, value_text, unit, flag, source_file)
         VALUES
             (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (date, measurement, source_file) DO NOTHING
     """
 
     with _conn() as conn:
         with conn.cursor() as cur:
             psycopg2.extras.execute_batch(cur, sql, rows, page_size=200)
-            count = cur.rowcount
+            inserted = cur.rowcount
 
+    # rowcount after execute_batch is the count of actually-inserted rows
+    # (skipped by ON CONFLICT DO NOTHING are not counted)
     logger.info(
-        "Inserted %d lab result(s) from '%s'.", len(rows), source_file
+        "Inserted %d/%d lab result(s) from '%s'.", inserted, len(rows), source_file
     )
-    return len(rows)
+    return inserted
 
 
 # ---------------------------------------------------------------------------
