@@ -1,0 +1,25 @@
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Secrets
+.env
+.env.*
+
+# PDFs — never bundle test or sample data into the image
+*.pdf
+
+# Editor / OS artefacts
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+
+# Docs and non-runtime files
+*.md
