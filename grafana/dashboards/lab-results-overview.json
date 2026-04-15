@@ -97,34 +97,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'WBC') AS \"WBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'RBC') AS \"RBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Hemoglobin') AS \"Hemoglobin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Hematocrit') AS \"Hematocrit\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Platelets') AS \"Platelets\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MCV') AS \"MCV\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MCH') AS \"MCH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MCHC') AS \"MCHC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'RDW') AS \"RDW\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MPV') AS \"MPV\"\nFROM samples s\nWHERE s.metric IN ('WBC', 'RBC', 'Hemoglobin', 'Hematocrit', 'Platelets', 'MCV', 'MCH', 'MCHC', 'RDW', 'MPV')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Complete Blood Count'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -144,8 +134,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -158,6 +148,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -176,84 +170,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -306,34 +228,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Neutrophils') AS \"Abs Neutrophils\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Lymphocytes') AS \"Abs Lymphocytes\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Monocytes') AS \"Abs Monocytes\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Eosinophils') AS \"Abs Eosinophils\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Basophils') AS \"Abs Basophils\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Immature Granulocytes') AS \"Abs Immature Granulocytes\"\nFROM samples s\nWHERE s.metric IN ('Abs Neutrophils', 'Abs Lymphocytes', 'Abs Monocytes', 'Abs Eosinophils', 'Abs Basophils', 'Abs Immature Granulocytes')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'WBC Differential (absolute)'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -353,8 +265,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -367,6 +279,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -385,84 +301,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -515,34 +359,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Neutrophils %') AS \"Neutrophils %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Lymphocytes %') AS \"Lymphocytes %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Monocytes %') AS \"Monocytes %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Eosinophils %') AS \"Eosinophils %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Basophils %') AS \"Basophils %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Immature Granulocytes %') AS \"Immature Granulocytes %\"\nFROM samples s\nWHERE s.metric IN ('Neutrophils %', 'Lymphocytes %', 'Monocytes %', 'Eosinophils %', 'Basophils %', 'Immature Granulocytes %')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'WBC Differential (%)'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -562,8 +396,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -576,6 +410,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -594,84 +432,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -724,34 +490,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose') AS \"Glucose\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN') AS \"BUN\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Creatinine') AS \"Creatinine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'eGFR') AS \"eGFR\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Sodium') AS \"Sodium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Potassium') AS \"Potassium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Chloride') AS \"Chloride\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CO2') AS \"CO2\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Calcium') AS \"Calcium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Anion Gap') AS \"Anion Gap\"\nFROM samples s\nWHERE s.metric IN ('Glucose', 'BUN', 'Creatinine', 'eGFR', 'Sodium', 'Potassium', 'Chloride', 'CO2', 'Calcium', 'Anion Gap')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -771,8 +527,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -785,6 +541,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -803,84 +563,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -933,34 +621,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'ALT') AS \"ALT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'AST') AS \"AST\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Alk Phos') AS \"Alk Phos\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Total Bilirubin') AS \"Total Bilirubin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Direct Bilirubin') AS \"Direct Bilirubin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'GGT') AS \"GGT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Albumin') AS \"Albumin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Total Protein') AS \"Total Protein\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Globulin') AS \"Globulin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'A/G Ratio') AS \"A/G Ratio\"\nFROM samples s\nWHERE s.metric IN ('ALT', 'AST', 'Alk Phos', 'Total Bilirubin', 'Direct Bilirubin', 'GGT', 'Albumin', 'Total Protein', 'Globulin', 'A/G Ratio')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Liver Panel'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -980,8 +658,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -994,6 +672,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -1012,84 +694,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -1142,34 +752,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Total Cholesterol') AS \"Total Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'HDL Cholesterol') AS \"HDL Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'LDL Cholesterol') AS \"LDL Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Triglycerides') AS \"Triglycerides\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Non-HDL Cholesterol') AS \"Non-HDL Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Apolipoprotein B') AS \"Apolipoprotein B\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Cholesterol/HDL Ratio') AS \"Cholesterol/HDL Ratio\"\nFROM samples s\nWHERE s.metric IN ('Total Cholesterol', 'HDL Cholesterol', 'LDL Cholesterol', 'Triglycerides', 'Non-HDL Cholesterol', 'Apolipoprotein B', 'Cholesterol/HDL Ratio')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Lipid Panel'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -1189,8 +789,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -1203,6 +803,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -1221,84 +825,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -1351,34 +883,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'TSH') AS \"TSH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Free T4') AS \"Free T4\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Free T3') AS \"Free T3\",\n    MAX(s.value) FILTER (WHERE s.metric = 'T4 Total') AS \"T4 Total\",\n    MAX(s.value) FILTER (WHERE s.metric = 'T3 Total') AS \"T3 Total\"\nFROM samples s\nWHERE s.metric IN ('TSH', 'Free T4', 'Free T3', 'T4 Total', 'T3 Total')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Thyroid'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -1398,8 +920,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -1412,6 +934,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -1430,84 +956,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -1560,34 +1014,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Troponin I') AS \"Troponin I\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CK') AS \"CK\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CK-MB') AS \"CK-MB\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BNP') AS \"BNP\"\nFROM samples s\nWHERE s.metric IN ('Troponin I', 'CK', 'CK-MB', 'BNP')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Cardiac Markers'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -1607,8 +1051,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -1621,6 +1065,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -1639,84 +1087,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -1769,34 +1145,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Ferritin') AS \"Ferritin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Iron') AS \"Iron\",\n    MAX(s.value) FILTER (WHERE s.metric = 'TIBC') AS \"TIBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Transferrin Saturation') AS \"Transferrin Saturation\"\nFROM samples s\nWHERE s.metric IN ('Ferritin', 'Iron', 'TIBC', 'Transferrin Saturation')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Iron Studies'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -1816,8 +1182,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -1830,6 +1196,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -1848,84 +1218,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -1978,34 +1276,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'PT') AS \"PT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'PTT') AS \"PTT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'INR') AS \"INR\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Fibrinogen') AS \"Fibrinogen\"\nFROM samples s\nWHERE s.metric IN ('PT', 'PTT', 'INR', 'Fibrinogen')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Coagulation'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -2025,8 +1313,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -2039,6 +1327,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -2057,84 +1349,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -2187,34 +1407,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'CRP') AS \"CRP\",\n    MAX(s.value) FILTER (WHERE s.metric = 'hsCRP') AS \"hsCRP\",\n    MAX(s.value) FILTER (WHERE s.metric = 'ESR') AS \"ESR\",\n    MAX(s.value) FILTER (WHERE s.metric = 'IL-6') AS \"IL-6\"\nFROM samples s\nWHERE s.metric IN ('CRP', 'hsCRP', 'ESR', 'IL-6')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Inflammatory Markers'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -2234,8 +1444,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -2248,6 +1458,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -2266,84 +1480,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -2396,34 +1538,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Insulin') AS \"Insulin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Cortisol') AS \"Cortisol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'ACTH') AS \"ACTH\"\nFROM samples s\nWHERE s.metric IN ('Insulin', 'Cortisol', 'ACTH')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Endocrine'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -2443,8 +1575,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -2457,6 +1589,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -2475,84 +1611,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -2605,34 +1669,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Vitamin D') AS \"Vitamin D\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Vitamin B12') AS \"Vitamin B12\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Folate') AS \"Folate\"\nFROM samples s\nWHERE s.metric IN ('Vitamin D', 'Vitamin B12', 'Folate')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Vitamins'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -2652,8 +1706,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -2666,6 +1720,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -2684,84 +1742,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -2814,34 +1800,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Hemoglobin A1c') AS \"Hemoglobin A1c\",\n    MAX(s.value) FILTER (WHERE s.metric = 'LDH') AS \"LDH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Magnesium') AS \"Magnesium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Ionized Calcium') AS \"Ionized Calcium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Uric Acid') AS \"Uric Acid\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Phosphorus') AS \"Phosphorus\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Lactate') AS \"Lactate\"\nFROM samples s\nWHERE s.metric IN ('Hemoglobin A1c', 'LDH', 'Magnesium', 'Ionized Calcium', 'Uric Acid', 'Phosphorus', 'Lactate')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Other Chemistry'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -2861,8 +1837,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -2875,6 +1851,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -2893,84 +1873,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -3023,34 +1931,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'CD3 T Cells %') AS \"CD3 T Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD3 T Cells Abs') AS \"CD3 T Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD4 T Cells %') AS \"CD4 T Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD4 T Cells Abs') AS \"CD4 T Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD8 T Cells %') AS \"CD8 T Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD8 T Cells Abs') AS \"CD8 T Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD4/CD8 Ratio') AS \"CD4/CD8 Ratio\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD19 B Cells %') AS \"CD19 B Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD19 B Cells Abs') AS \"CD19 B Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD16/CD56 NK Cells %') AS \"CD16/CD56 NK Cells %\"\nFROM samples s\nWHERE s.metric IN ('CD3 T Cells %', 'CD3 T Cells Abs', 'CD4 T Cells %', 'CD4 T Cells Abs', 'CD8 T Cells %', 'CD8 T Cells Abs', 'CD4/CD8 Ratio', 'CD19 B Cells %', 'CD19 B Cells Abs', 'CD16/CD56 NK Cells %')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Lymphocyte Subsets'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -3070,8 +1968,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -3084,6 +1982,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -3102,84 +2004,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -3232,34 +2062,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'pH') AS \"pH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'PCO2') AS \"PCO2\",\n    MAX(s.value) FILTER (WHERE s.metric = 'PO2') AS \"PO2\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Oxygen Saturation') AS \"Oxygen Saturation\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Base Excess') AS \"Base Excess\"\nFROM samples s\nWHERE s.metric IN ('pH', 'PCO2', 'PO2', 'Oxygen Saturation', 'Base Excess')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Blood Gas'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -3279,8 +2099,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -3293,6 +2113,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -3311,84 +2135,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }
@@ -3441,34 +2193,24 @@
             "type": "grafana-postgresql-datasource",
             "uid": "postgres"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN/Creatinine Ratio') AS \"BUN/Creatinine Ratio\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose, Urine') AS \"Glucose, Urine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Ketones, Urine') AS \"Ketones, Urine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Specific Gravity, Urine') AS \"Specific Gravity, Urine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Urine pH') AS \"Urine pH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Reticulocyte Count') AS \"Reticulocyte Count\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Nucleated RBC') AS \"Nucleated RBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Mean Plasma Glucose') AS \"Mean Plasma Glucose\"\nFROM samples s\nWHERE s.metric IN ('BUN/Creatinine Ratio', 'Glucose, Urine', 'Ketones, Urine', 'Specific Gravity, Urine', 'Urine pH', 'Reticulocyte Count', 'Nucleated RBC', 'Mean Plasma Glucose')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Urinalysis & Other'\nORDER BY m.sort_order",
           "refId": "A",
-          "editorMode": "code",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "editorMode": "code"
         }
       ],
       "transformations": [
         {
-          "id": "timeSeriesTable",
-          "options": {}
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -3488,8 +2230,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/Trend|#/"
+              "id": "byName",
+              "options": "Trend"
             },
             "properties": [
               {
@@ -3502,6 +2244,10 @@
                   "pointSize": 3,
                   "showPoints": "always"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
               }
             ]
           },
@@ -3520,84 +2266,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last"
+              "options": "Unit"
             },
             "properties": [
               {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Min"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Max"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Mean"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "First"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
+                "id": "custom.width",
+                "value": 80
               }
             ]
           }

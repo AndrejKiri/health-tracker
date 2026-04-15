@@ -19,7 +19,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "Reference: Timeseries Panel",
+      "title": "Reference: Timeseries Panel (Glucose)",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 10 },
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
@@ -67,150 +67,149 @@
     },
     {
       "id": 2,
-      "title": "Approach A: timeSeriesTable (current — broken names)",
+      "title": "SQL Array Method: Metabolic Panel (sparkline table)",
+      "description": "Bypasses timeSeriesTable entirely. Uses array_to_json(array_agg()) in SQL to build sparkline arrays, then convertFieldType to render them.",
       "type": "table",
       "gridPos": { "x": 12, "y": 0, "w": 12, "h": 10 },
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
       "targets": [
         {
           "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose') AS \"Glucose\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN') AS \"BUN\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Creatinine') AS \"Creatinine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Sodium') AS \"Sodium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Potassium') AS \"Potassium\"\nFROM samples s\nWHERE s.metric IN ('Glucose', 'BUN', 'Creatinine', 'Sodium', 'Potassium')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time ORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
       ],
       "transformations": [
-        { "id": "timeSeriesTable", "options": {} }
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "targetField": "Trend", "destinationType": "other" }
+            ]
+          }
+        }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "cellOptions": { "type": "auto" }, "align": "auto" },
+          "custom": {
+            "cellOptions": { "type": "auto" },
+            "align": "auto"
+          },
           "color": { "mode": "palette-classic" }
         },
         "overrides": [
           {
-            "matcher": { "id": "byRegexp", "options": "/Trend|#/" },
+            "matcher": { "id": "byName", "options": "Trend" },
             "properties": [
               {
                 "id": "custom.cellOptions",
-                "value": { "type": "sparkline", "drawStyle": "line", "lineWidth": 1, "fillOpacity": 15, "pointSize": 3, "showPoints": "always" }
-              }
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              },
+              { "id": "custom.width", "value": 300 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Name" },
+            "properties": [
+              { "id": "custom.width", "value": 200 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Unit" },
+            "properties": [
+              { "id": "custom.width", "value": 80 }
             ]
           }
         ]
       },
-      "options": { "showHeader": true, "cellHeight": "md", "footer": { "show": false } }
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": { "show": false }
+      }
     },
     {
       "id": 3,
-      "title": "Approach B: separate queries per metric + timeSeriesTable",
+      "title": "SQL Array Method: Complete Blood Count (sparkline table)",
+      "description": "Second category to verify the approach scales across different metric types.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 14 },
+      "gridPos": { "x": 0, "y": 10, "w": 24, "h": 14 },
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
       "targets": [
         {
           "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"Glucose\" FROM samples s WHERE s.metric = 'Glucose' AND $__timeFilter(s.time) ORDER BY s.time",
-          "refId": "Glucose",
-          "editorMode": "code"
-        },
-        {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"BUN\" FROM samples s WHERE s.metric = 'BUN' AND $__timeFilter(s.time) ORDER BY s.time",
-          "refId": "BUN",
-          "editorMode": "code"
-        },
-        {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"Creatinine\" FROM samples s WHERE s.metric = 'Creatinine' AND $__timeFilter(s.time) ORDER BY s.time",
-          "refId": "Creatinine",
-          "editorMode": "code"
-        },
-        {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"Sodium\" FROM samples s WHERE s.metric = 'Sodium' AND $__timeFilter(s.time) ORDER BY s.time",
-          "refId": "Sodium",
-          "editorMode": "code"
-        },
-        {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"Potassium\" FROM samples s WHERE s.metric = 'Potassium' AND $__timeFilter(s.time) ORDER BY s.time",
-          "refId": "Potassium",
-          "editorMode": "code"
-        }
-      ],
-      "transformations": [
-        { "id": "timeSeriesTable", "options": {} }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "cellOptions": { "type": "auto" }, "align": "auto" },
-          "color": { "mode": "palette-classic" }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byRegexp", "options": "/Trend|#/" },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": { "type": "sparkline", "drawStyle": "line", "lineWidth": 1, "fillOpacity": 15, "pointSize": 3, "showPoints": "always" }
-              }
-            ]
-          }
-        ]
-      },
-      "options": { "showHeader": true, "cellHeight": "md", "footer": { "show": false } }
-    },
-    {
-      "id": 4,
-      "title": "Approach C: prepareTimeSeries multi + timeSeriesTable",
-      "type": "table",
-      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 14 },
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-      "targets": [
-        {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose') AS \"Glucose\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN') AS \"BUN\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Creatinine') AS \"Creatinine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Sodium') AS \"Sodium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Potassium') AS \"Potassium\"\nFROM samples s\nWHERE s.metric IN ('Glucose', 'BUN', 'Creatinine', 'Sodium', 'Potassium')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time ORDER BY s.time",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Complete Blood Count'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
       ],
       "transformations": [
-        { "id": "prepareTimeSeries", "options": { "format": "multi" } },
-        { "id": "timeSeriesTable", "options": {} }
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "targetField": "Trend", "destinationType": "other" }
+            ]
+          }
+        }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "cellOptions": { "type": "auto" }, "align": "auto" },
+          "custom": {
+            "cellOptions": { "type": "auto" },
+            "align": "auto"
+          },
           "color": { "mode": "palette-classic" }
         },
         "overrides": [
           {
-            "matcher": { "id": "byRegexp", "options": "/Trend|#/" },
+            "matcher": { "id": "byName", "options": "Trend" },
             "properties": [
               {
                 "id": "custom.cellOptions",
-                "value": { "type": "sparkline", "drawStyle": "line", "lineWidth": 1, "fillOpacity": 15, "pointSize": 3, "showPoints": "always" }
-              }
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              },
+              { "id": "custom.width", "value": 300 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Name" },
+            "properties": [
+              { "id": "custom.width", "value": 200 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Unit" },
+            "properties": [
+              { "id": "custom.width", "value": 80 }
             ]
           }
         ]
       },
-      "options": { "showHeader": true, "cellHeight": "md", "footer": { "show": false } }
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": { "show": false }
+      }
     }
   ],
   "schemaVersion": 39,
@@ -220,5 +219,5 @@
   "timezone": "browser",
   "title": "Debug: Sparkline Comparison",
   "uid": "debug-sparkline",
-  "version": 2
+  "version": 3
 }

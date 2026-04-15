@@ -150,34 +150,51 @@ CATEGORIES = [
 
 
 def make_table_panel(panel_id, category, measurements, x, y):
-    """Create a Table panel with sparkline cells for one category."""
-    # Pivot to wide format via FILTER (WHERE): one column per metric.
-    # Grafana treats each column as a named time series.
-    filter_cols = ",\n    ".join(
-        f"MAX(s.value) FILTER (WHERE s.metric = '{m[0]}') AS \"{m[0]}\""
-        for m in measurements
-    )
-    meas_list = ", ".join(f"'{m[0]}'" for m in measurements)
+    """Create a Table panel with sparkline cells for one category.
+
+    Uses the SQL array method: builds sparkline data via
+    array_to_json(array_agg()) in PostgreSQL, returned as a table.
+    The convertFieldType transformation converts the JSON string to a
+    type Grafana can render as a sparkline cell.  This bypasses the
+    broken timeSeriesTable transformation entirely.
+    """
+    # Escape single quotes in category name for SQL
+    cat_escaped = category.replace("'", "''")
+
     sql = (
-        f"SELECT s.time,\n"
-        f"    {filter_cols}\n"
-        f"FROM samples s\n"
-        f"WHERE s.metric IN ({meas_list})\n"
-        f"  AND $__timeFilter(s.time)\n"
-        f"  AND s.value IS NOT NULL\n"
-        f"GROUP BY s.time\n"
-        f"ORDER BY s.time"
+        "SELECT\n"
+        "    m.name AS \"Name\",\n"
+        "    m.unit AS \"Unit\",\n"
+        "    COALESCE(\n"
+        "      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n"
+        "       FROM samples s2\n"
+        "       WHERE s2.metric = m.name\n"
+        "         AND $__timeFilter(s2.time)),\n"
+        "      '[]'\n"
+        "    ) AS \"Trend\",\n"
+        "    (SELECT s3.value\n"
+        "     FROM samples s3\n"
+        "     WHERE s3.metric = m.name\n"
+        "     ORDER BY s3.time DESC\n"
+        "     LIMIT 1) AS \"Last\",\n"
+        "    rr.ref_low AS \"Ref Low\",\n"
+        "    rr.ref_high AS \"Ref High\"\n"
+        "FROM metrics m\n"
+        "LEFT JOIN reference_ranges rr\n"
+        "    ON rr.metric = m.name\n"
+        "    AND rr.range_type = 'standard'\n"
+        "    AND rr.sex IS NULL\n"
+        f"WHERE m.category = '{cat_escaped}'\n"
+        "ORDER BY m.sort_order"
     )
 
     n = len(measurements)
     h = max(n * 2 + 3, 6)
 
-    # After timeSeriesTable transform on wide-format time series,
-    # columns should be: "Name" (measurement) + "Trend" (sparkline) + aggregates.
     overrides = [
-        # All Trend columns: render as sparkline
+        # Trend column: render as sparkline
         {
-            "matcher": {"id": "byRegexp", "options": "/Trend|#/"},
+            "matcher": {"id": "byName", "options": "Trend"},
             "properties": [
                 {
                     "id": "custom.cellOptions",
@@ -190,23 +207,24 @@ def make_table_panel(panel_id, category, measurements, x, y):
                         "showPoints": "always",
                     },
                 },
+                {"id": "custom.width", "value": 300},
             ],
         },
-        # Name column: fixed narrow width
+        # Name column: fixed width
         {
             "matcher": {"id": "byName", "options": "Name"},
             "properties": [
                 {"id": "custom.width", "value": 200},
             ],
         },
+        # Unit column: narrow
+        {
+            "matcher": {"id": "byName", "options": "Unit"},
+            "properties": [
+                {"id": "custom.width", "value": 80},
+            ],
+        },
     ]
-
-    # Hide common aggregate columns the transform might produce
-    for col in ("Last", "Min", "Max", "Mean", "Count", "Total", "First"):
-        overrides.append({
-            "matcher": {"id": "byName", "options": col},
-            "properties": [{"id": "custom.hidden", "value": True}],
-        })
 
     return {
         "id": panel_id,
@@ -217,22 +235,21 @@ def make_table_panel(panel_id, category, measurements, x, y):
         "targets": [
             {
                 "datasource": DS,
-                "format": "time_series",
+                "format": "table",
                 "rawQuery": True,
                 "rawSql": sql,
                 "refId": "A",
                 "editorMode": "code",
-                "sql": {
-                    "columns": [{"parameters": [], "type": "function"}],
-                    "groupBy": [{"property": {"type": "string"}, "type": "groupBy"}],
-                    "limit": 50,
-                },
             }
         ],
         "transformations": [
             {
-                "id": "timeSeriesTable",
-                "options": {},
+                "id": "convertFieldType",
+                "options": {
+                    "conversions": [
+                        {"targetField": "Trend", "destinationType": "other"}
+                    ]
+                },
             }
         ],
         "fieldConfig": {
