@@ -72,7 +72,7 @@ def _process_file(pdf_path: str) -> None:
     On failure: move to FAILED_DIR and log the error.
     """
     # Lazy imports to avoid circular dependency at module level
-    from .db import insert_events, insert_lab_results, is_processed, log_processing
+    from .db import check_flags_against_references, insert_events, insert_lab_results, is_processed, log_processing
     from .llm_client import extract_from_text
     from .pdf_parser import extract_text
     from .schema import LabResult, MedicalEvent
@@ -99,6 +99,7 @@ def _process_file(pdf_path: str) -> None:
         lab_results = [LabResult.model_validate(r) for r in result["lab_results"]]
         events = [MedicalEvent.model_validate(e) for e in result["events"]]
 
+        check_flags_against_references(lab_results)
         insert_lab_results(lab_results, filename)
         insert_events(events, filename)
         log_processing(filename, "success")

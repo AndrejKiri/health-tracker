@@ -441,3 +441,69 @@ def list_processed_files() -> list[dict]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql)
             return [dict(r) for r in cur.fetchall()]
+
+
+# ---------------------------------------------------------------------------
+# Flag cross-check
+# ---------------------------------------------------------------------------
+
+
+def check_flags_against_references(results: list) -> None:
+    """
+    Compare the LLM-extracted flag on each LabResult against the stored
+    reference range and emit a WARNING for any disagreement.
+
+    This does NOT modify or reject the results — they are stored as-is
+    since the lab's own flag is authoritative. The warning exists to
+    surface cases where the LLM misread a flag or OCR introduced noise.
+
+    Parameters
+    ----------
+    results : list[LabResult]
+        Validated LabResult objects, typically right before DB insertion.
+    """
+    if not results:
+        return
+
+    measurements = list({r.measurement for r in results})
+    placeholders = ", ".join(["%s"] * len(measurements))
+    sql = f"""
+        SELECT measurement, reference_low, reference_high
+        FROM reference_ranges
+        WHERE measurement IN ({placeholders})
+          AND reference_low IS NOT NULL
+          AND reference_high IS NOT NULL
+    """
+
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, measurements)
+            ref_map: dict = {row["measurement"]: row for row in cur.fetchall()}
+
+    for r in results:
+        if r.value is None:
+            continue
+        ref = ref_map.get(r.measurement)
+        if ref is None:
+            continue
+
+        if r.value > ref["reference_high"]:
+            expected = "H"
+        elif r.value < ref["reference_low"]:
+            expected = "L"
+        else:
+            expected = None
+
+        if expected != r.flag:
+            logger.warning(
+                "Flag mismatch for %s (value=%.3g %s): "
+                "LLM extracted flag=%r, reference range [%.3g–%.3g] suggests %r. "
+                "Storing LLM flag as-is.",
+                r.measurement,
+                r.value,
+                getattr(r, "unit", ""),
+                r.flag,
+                ref["reference_low"],
+                ref["reference_high"],
+                expected,
+            )
