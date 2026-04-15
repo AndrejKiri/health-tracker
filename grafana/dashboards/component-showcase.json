@@ -1,0 +1,360 @@
+{
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-postgresql-datasource",
+      "name": "PostgreSQL",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Component showcase \u2014 Lipid Panel table with sparklines + cardiovascular timeseries.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "dashboard",
+      "title": "\u2190 Lab Results Overview",
+      "type": "link",
+      "url": "/d/lab-results-overview",
+      "tooltip": "Back to the full overview"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Lipid Panel (7)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 17
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value, time::date AS last_date\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    lv.last_date AS \"Last Tested\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    m.description AS \"Description\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Lipid Panel'\nORDER BY m.sort_order",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trend"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "\u2191 H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "\u2193 L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "\u2014",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last Tested"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Description"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 2,
+      "title": "Lipid Trends \u2014 LDL \u00b7 HDL \u00b7 Total Cholesterol \u00b7 Triglycerides",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = \"Total Cholesterol\") AS \"Total Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = \"LDL Cholesterol\") AS \"LDL\",\n    MAX(s.value) FILTER (WHERE s.metric = \"HDL Cholesterol\") AS \"HDL\",\n    MAX(s.value) FILTER (WHERE s.metric = \"Triglycerides\") AS \"Triglycerides\"\nFROM samples s\nWHERE s.metric IN (\"Total Cholesterol\", \"LDL Cholesterol\", \"HDL Cholesterol\", \"Triglycerides\")\n  AND $__timeFilter(s.time)\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "pointSize": 5,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max",
+            "mean"
+          ]
+        }
+      },
+      "pluginVersion": "11.2.0"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "health",
+    "lab-results",
+    "showcase"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5y",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Component Showcase \u2014 Lipid Panel",
+  "uid": "component-showcase",
+  "version": 1
+}

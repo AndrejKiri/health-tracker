@@ -648,6 +648,157 @@ def make_detail_dashboard():
     }
 
 
+def make_timeseries_panel(panel_id, title, metrics, x, y, w=24, h=12):
+    """Create a timeseries panel for multiple metrics in wide format.
+
+    Args:
+        metrics: list of (metric_name, alias) tuples.
+                 Alias is the series label shown in the legend.
+    """
+    # Build wide-format SQL: one column per metric, pivoted with FILTER
+    select_cols = ",\n    ".join(
+        f"MAX(s.value) FILTER (WHERE s.metric = {json.dumps(name)}) AS {json.dumps(alias)}"
+        for name, alias in metrics
+    )
+    metric_list = ", ".join(json.dumps(name) for name, _ in metrics)
+    sql = (
+        f"SELECT s.time,\n"
+        f"    {select_cols}\n"
+        f"FROM samples s\n"
+        f"WHERE s.metric IN ({metric_list})\n"
+        f"  AND $__timeFilter(s.time)\n"
+        f"GROUP BY s.time\n"
+        f"ORDER BY s.time"
+    )
+
+    return {
+        "id": panel_id,
+        "title": title,
+        "type": "timeseries",
+        "gridPos": {"x": x, "y": y, "w": w, "h": h},
+        "datasource": DS,
+        "targets": [
+            {
+                "datasource": DS,
+                "format": "time_series",
+                "rawQuery": True,
+                "rawSql": sql,
+                "refId": "A",
+                "editorMode": "code",
+            }
+        ],
+        "fieldConfig": {
+            "defaults": {
+                "custom": {
+                    "lineWidth": 2,
+                    "fillOpacity": 8,
+                    "pointSize": 5,
+                    "showPoints": "always",
+                    "spanNulls": False,
+                },
+                "color": {"mode": "palette-classic"},
+            },
+            "overrides": [],
+        },
+        "options": {
+            "tooltip": {"mode": "multi", "sort": "none"},
+            "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "calcs": ["last", "min", "max", "mean"],
+            },
+        },
+        "pluginVersion": "11.2.0",
+    }
+
+
+# ── Lipid Panel metrics used in the showcase ──────────────────────────────────
+# Key series for the timeseries panel: the four that tell the cardiovascular story
+LIPID_TIMESERIES_METRICS = [
+    ("Total Cholesterol", "Total Cholesterol"),
+    ("LDL Cholesterol",   "LDL"),
+    ("HDL Cholesterol",   "HDL"),
+    ("Triglycerides",     "Triglycerides"),
+]
+# Full Lipid Panel entry (matches CATEGORIES) used for the table panel
+LIPID_PANEL_ENTRY = next(m for cat, m in CATEGORIES if cat == "Lipid Panel")
+
+
+def make_showcase_dashboard():
+    """Component showcase dashboard using Lipid Panel data.
+
+    Layout (two full-width panels):
+      Row 0 — Table panel: all Lipid Panel metrics with sparklines + status
+      Row 1 — Timeseries: LDL, HDL, Total Cholesterol, Triglycerides over time
+    """
+    # Table panel height
+    table_h = max(len(LIPID_PANEL_ENTRY) * 2 + 3, 6)
+
+    table_panel = make_table_panel(
+        panel_id=1,
+        category="Lipid Panel",
+        measurements=LIPID_PANEL_ENTRY,
+        x=0,
+        y=0,
+    )
+    # Override id to be explicit (make_table_panel already sets it, but be safe)
+    table_panel["id"] = 1
+
+    ts_panel = make_timeseries_panel(
+        panel_id=2,
+        title="Lipid Trends — LDL · HDL · Total Cholesterol · Triglycerides",
+        metrics=LIPID_TIMESERIES_METRICS,
+        x=0,
+        y=table_h,
+        w=24,
+        h=14,
+    )
+
+    return {
+        "__requires": [
+            {"type": "grafana", "id": "grafana", "name": "Grafana", "version": "11.0.0"},
+            {"type": "datasource", "id": "grafana-postgresql-datasource", "name": "PostgreSQL", "version": "1.0.0"},
+            {"type": "panel", "id": "table", "name": "Table", "version": ""},
+            {"type": "panel", "id": "timeseries", "name": "Time series", "version": ""},
+        ],
+        "annotations": {"list": [
+            {
+                "builtIn": 1,
+                "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+                "enable": True,
+                "hide": True,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard",
+            }
+        ]},
+        "description": "Component showcase — Lipid Panel table with sparklines + cardiovascular timeseries.",
+        "editable": True,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 1,
+        "id": None,
+        "links": [
+            {
+                "icon": "dashboard",
+                "title": "← Lab Results Overview",
+                "type": "link",
+                "url": "/d/lab-results-overview",
+                "tooltip": "Back to the full overview",
+            }
+        ],
+        "panels": [table_panel, ts_panel],
+        "schemaVersion": 39,
+        "tags": ["health", "lab-results", "showcase"],
+        "templating": {"list": []},
+        "time": {"from": "now-5y", "to": "now"},
+        "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]},
+        "timezone": "browser",
+        "title": "Component Showcase — Lipid Panel",
+        "uid": "component-showcase",
+        "version": 1,
+    }
+
+
 if __name__ == "__main__":
     import pathlib
     dashboards = pathlib.Path(__file__).resolve().parent.parent / "grafana" / "dashboards"
@@ -662,3 +813,8 @@ if __name__ == "__main__":
     with open(out2, "w") as f:
         json.dump(make_detail_dashboard(), f, indent=2)
     print(f"Generated {out2}")
+
+    out3 = dashboards / "component-showcase.json"
+    with open(out3, "w") as f:
+        json.dump(make_showcase_dashboard(), f, indent=2)
+    print(f"Generated {out3}")
