@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS metrics (
     display_name TEXT NOT NULL,   -- same as name for now; future flexibility
     category TEXT NOT NULL,       -- e.g. 'Complete Blood Count'
     unit TEXT,                    -- e.g. 'x10E9/L', 'mg/dL'
+    description TEXT,             -- clinical explanation shown in dashboard tooltips
     scale TEXT DEFAULT 'linear',  -- 'linear' or 'logarithmic'
     sort_order INTEGER            -- controls display position in dashboards
 );
