@@ -65,11 +65,14 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
+    # The extractor runs as UID 1001. The bind-mount directories must be
+    # writable by that UID. Run once after creating them:
+    #   sudo chown -R 1001:1001 data/
     volumes:
       - ./data/inbox:/data/inbox
       - ./data/processed:/data/processed
       - ./data/failed:/data/failed
-      - ./db:/app/db
+      - ./db:/app/db:ro
       - ./reference_ranges.json:/app/reference_ranges.json:ro
     environment:
       DB_HOST: postgres
