@@ -1,0 +1,3646 @@
+{
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-postgresql-datasource",
+      "name": "PostgreSQL",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#5794F2",
+        "name": "Medical Events",
+        "rawQuery": "SELECT date::timestamptz as time, end_date::timestamptz as timeend, title as text, category || ' \u2014 ' || COALESCE(subcategory, '') || ': ' || COALESCE(description,'') as tags FROM events WHERE $__timeFilter(date::timestamptz) ORDER BY date",
+        "showIn": 0,
+        "step": "60s",
+        "type": "tags"
+      }
+    ]
+  },
+  "description": "Compact lab results overview \u2014 106 biomarkers with inline sparkline trends.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "dashboard",
+      "title": "Health Timeline (detailed)",
+      "type": "link",
+      "url": "/d/health-timeline",
+      "tooltip": "Open the full health timeline dashboard"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Complete Blood Count",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "title": "Complete Blood Count (10)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 24,
+        "h": 23
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'WBC') AS \"WBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'RBC') AS \"RBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Hemoglobin') AS \"Hemoglobin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Hematocrit') AS \"Hematocrit\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Platelets') AS \"Platelets\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MCV') AS \"MCV\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MCH') AS \"MCH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MCHC') AS \"MCHC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'RDW') AS \"RDW\",\n    MAX(s.value) FILTER (WHERE s.metric = 'MPV') AS \"MPV\"\nFROM samples s\nWHERE s.metric IN ('WBC', 'RBC', 'Hemoglobin', 'Hematocrit', 'Platelets', 'MCV', 'MCH', 'MCHC', 'RDW', 'MPV')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 3,
+      "title": "WBC Differential (absolute)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 4,
+      "title": "WBC Differential (absolute) (6)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 15
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Neutrophils') AS \"Abs Neutrophils\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Lymphocytes') AS \"Abs Lymphocytes\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Monocytes') AS \"Abs Monocytes\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Eosinophils') AS \"Abs Eosinophils\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Basophils') AS \"Abs Basophils\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Abs Immature Granulocytes') AS \"Abs Immature Granulocytes\"\nFROM samples s\nWHERE s.metric IN ('Abs Neutrophils', 'Abs Lymphocytes', 'Abs Monocytes', 'Abs Eosinophils', 'Abs Basophils', 'Abs Immature Granulocytes')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 5,
+      "title": "WBC Differential (%)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "title": "WBC Differential (%) (6)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 24,
+        "h": 15
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Neutrophils %') AS \"Neutrophils %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Lymphocytes %') AS \"Lymphocytes %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Monocytes %') AS \"Monocytes %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Eosinophils %') AS \"Eosinophils %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Basophils %') AS \"Basophils %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Immature Granulocytes %') AS \"Immature Granulocytes %\"\nFROM samples s\nWHERE s.metric IN ('Neutrophils %', 'Lymphocytes %', 'Monocytes %', 'Eosinophils %', 'Basophils %', 'Immature Granulocytes %')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 7,
+      "title": "Metabolic Panel",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "title": "Metabolic Panel (10)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 23
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose') AS \"Glucose\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN') AS \"BUN\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Creatinine') AS \"Creatinine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'eGFR') AS \"eGFR\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Sodium') AS \"Sodium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Potassium') AS \"Potassium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Chloride') AS \"Chloride\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CO2') AS \"CO2\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Calcium') AS \"Calcium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Anion Gap') AS \"Anion Gap\"\nFROM samples s\nWHERE s.metric IN ('Glucose', 'BUN', 'Creatinine', 'eGFR', 'Sodium', 'Potassium', 'Chloride', 'CO2', 'Calcium', 'Anion Gap')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 9,
+      "title": "Liver Panel",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "title": "Liver Panel (10)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 81,
+        "w": 24,
+        "h": 23
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'ALT') AS \"ALT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'AST') AS \"AST\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Alk Phos') AS \"Alk Phos\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Total Bilirubin') AS \"Total Bilirubin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Direct Bilirubin') AS \"Direct Bilirubin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'GGT') AS \"GGT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Albumin') AS \"Albumin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Total Protein') AS \"Total Protein\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Globulin') AS \"Globulin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'A/G Ratio') AS \"A/G Ratio\"\nFROM samples s\nWHERE s.metric IN ('ALT', 'AST', 'Alk Phos', 'Total Bilirubin', 'Direct Bilirubin', 'GGT', 'Albumin', 'Total Protein', 'Globulin', 'A/G Ratio')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 11,
+      "title": "Lipid Panel",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 104,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "title": "Lipid Panel (7)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 105,
+        "w": 24,
+        "h": 17
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Total Cholesterol') AS \"Total Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'HDL Cholesterol') AS \"HDL Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'LDL Cholesterol') AS \"LDL Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Triglycerides') AS \"Triglycerides\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Non-HDL Cholesterol') AS \"Non-HDL Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Apolipoprotein B') AS \"Apolipoprotein B\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Cholesterol/HDL Ratio') AS \"Cholesterol/HDL Ratio\"\nFROM samples s\nWHERE s.metric IN ('Total Cholesterol', 'HDL Cholesterol', 'LDL Cholesterol', 'Triglycerides', 'Non-HDL Cholesterol', 'Apolipoprotein B', 'Cholesterol/HDL Ratio')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 13,
+      "title": "Thyroid",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 122,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
+      "title": "Thyroid (5)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 123,
+        "w": 24,
+        "h": 13
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'TSH') AS \"TSH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Free T4') AS \"Free T4\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Free T3') AS \"Free T3\",\n    MAX(s.value) FILTER (WHERE s.metric = 'T4 Total') AS \"T4 Total\",\n    MAX(s.value) FILTER (WHERE s.metric = 'T3 Total') AS \"T3 Total\"\nFROM samples s\nWHERE s.metric IN ('TSH', 'Free T4', 'Free T3', 'T4 Total', 'T3 Total')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 15,
+      "title": "Cardiac Markers",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 136,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "title": "Cardiac Markers (4)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 137,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Troponin I') AS \"Troponin I\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CK') AS \"CK\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CK-MB') AS \"CK-MB\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BNP') AS \"BNP\"\nFROM samples s\nWHERE s.metric IN ('Troponin I', 'CK', 'CK-MB', 'BNP')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 17,
+      "title": "Iron Studies",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 148,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 18,
+      "title": "Iron Studies (4)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 149,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Ferritin') AS \"Ferritin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Iron') AS \"Iron\",\n    MAX(s.value) FILTER (WHERE s.metric = 'TIBC') AS \"TIBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Transferrin Saturation') AS \"Transferrin Saturation\"\nFROM samples s\nWHERE s.metric IN ('Ferritin', 'Iron', 'TIBC', 'Transferrin Saturation')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 19,
+      "title": "Coagulation",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 160,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "title": "Coagulation (4)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 161,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'PT') AS \"PT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'PTT') AS \"PTT\",\n    MAX(s.value) FILTER (WHERE s.metric = 'INR') AS \"INR\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Fibrinogen') AS \"Fibrinogen\"\nFROM samples s\nWHERE s.metric IN ('PT', 'PTT', 'INR', 'Fibrinogen')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 21,
+      "title": "Inflammatory Markers",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 172,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "title": "Inflammatory Markers (4)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 173,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'CRP') AS \"CRP\",\n    MAX(s.value) FILTER (WHERE s.metric = 'hsCRP') AS \"hsCRP\",\n    MAX(s.value) FILTER (WHERE s.metric = 'ESR') AS \"ESR\",\n    MAX(s.value) FILTER (WHERE s.metric = 'IL-6') AS \"IL-6\"\nFROM samples s\nWHERE s.metric IN ('CRP', 'hsCRP', 'ESR', 'IL-6')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 23,
+      "title": "Endocrine",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 184,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 24,
+      "title": "Endocrine (3)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 185,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Insulin') AS \"Insulin\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Cortisol') AS \"Cortisol\",\n    MAX(s.value) FILTER (WHERE s.metric = 'ACTH') AS \"ACTH\"\nFROM samples s\nWHERE s.metric IN ('Insulin', 'Cortisol', 'ACTH')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 25,
+      "title": "Vitamins",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 194,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "title": "Vitamins (3)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 195,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Vitamin D') AS \"Vitamin D\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Vitamin B12') AS \"Vitamin B12\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Folate') AS \"Folate\"\nFROM samples s\nWHERE s.metric IN ('Vitamin D', 'Vitamin B12', 'Folate')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 27,
+      "title": "Other Chemistry",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 204,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 28,
+      "title": "Other Chemistry (7)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 205,
+        "w": 24,
+        "h": 17
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Hemoglobin A1c') AS \"Hemoglobin A1c\",\n    MAX(s.value) FILTER (WHERE s.metric = 'LDH') AS \"LDH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Magnesium') AS \"Magnesium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Ionized Calcium') AS \"Ionized Calcium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Uric Acid') AS \"Uric Acid\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Phosphorus') AS \"Phosphorus\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Lactate') AS \"Lactate\"\nFROM samples s\nWHERE s.metric IN ('Hemoglobin A1c', 'LDH', 'Magnesium', 'Ionized Calcium', 'Uric Acid', 'Phosphorus', 'Lactate')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 29,
+      "title": "Lymphocyte Subsets",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 222,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "title": "Lymphocyte Subsets (10)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 223,
+        "w": 24,
+        "h": 23
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'CD3 T Cells %') AS \"CD3 T Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD3 T Cells Abs') AS \"CD3 T Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD4 T Cells %') AS \"CD4 T Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD4 T Cells Abs') AS \"CD4 T Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD8 T Cells %') AS \"CD8 T Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD8 T Cells Abs') AS \"CD8 T Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD4/CD8 Ratio') AS \"CD4/CD8 Ratio\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD19 B Cells %') AS \"CD19 B Cells %\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD19 B Cells Abs') AS \"CD19 B Cells Abs\",\n    MAX(s.value) FILTER (WHERE s.metric = 'CD16/CD56 NK Cells %') AS \"CD16/CD56 NK Cells %\"\nFROM samples s\nWHERE s.metric IN ('CD3 T Cells %', 'CD3 T Cells Abs', 'CD4 T Cells %', 'CD4 T Cells Abs', 'CD8 T Cells %', 'CD8 T Cells Abs', 'CD4/CD8 Ratio', 'CD19 B Cells %', 'CD19 B Cells Abs', 'CD16/CD56 NK Cells %')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 31,
+      "title": "Blood Gas",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 246,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 32,
+      "title": "Blood Gas (5)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 247,
+        "w": 24,
+        "h": 13
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'pH') AS \"pH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'PCO2') AS \"PCO2\",\n    MAX(s.value) FILTER (WHERE s.metric = 'PO2') AS \"PO2\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Oxygen Saturation') AS \"Oxygen Saturation\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Base Excess') AS \"Base Excess\"\nFROM samples s\nWHERE s.metric IN ('pH', 'PCO2', 'PO2', 'Oxygen Saturation', 'Base Excess')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    },
+    {
+      "id": 33,
+      "title": "Urinalysis & Other",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 260,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 34,
+      "title": "Urinalysis & Other (8)",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 261,
+        "w": 24,
+        "h": 19
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN/Creatinine Ratio') AS \"BUN/Creatinine Ratio\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose, Urine') AS \"Glucose, Urine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Ketones, Urine') AS \"Ketones, Urine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Specific Gravity, Urine') AS \"Specific Gravity, Urine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Urine pH') AS \"Urine pH\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Reticulocyte Count') AS \"Reticulocyte Count\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Nucleated RBC') AS \"Nucleated RBC\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Mean Plasma Glucose') AS \"Mean Plasma Glucose\"\nFROM samples s\nWHERE s.metric IN ('BUN/Creatinine Ratio', 'Glucose, Urine', 'Ketones, Urine', 'Specific Gravity, Urine', 'Urine pH', 'Reticulocyte Count', 'Nucleated RBC', 'Mean Plasma Glucose')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time\nORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "align": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Trend|#/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline",
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 15,
+                  "pointSize": 3,
+                  "showPoints": "always"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Min"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": []
+      },
+      "pluginVersion": "11.2.0"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "health",
+    "lab-results"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5y",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Lab Results Overview",
+  "uid": "lab-results-overview",
+  "version": 2
+}

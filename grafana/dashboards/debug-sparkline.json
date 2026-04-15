@@ -1,0 +1,224 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Reference: Timeseries Panel",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 10 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"Glucose\" FROM samples s WHERE s.metric = 'Glucose' AND $__timeFilter(s.time) ORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 6,
+            "showPoints": "always",
+            "thresholdsStyle": { "mode": "area" }
+          },
+          "unit": "mg/dL",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 70 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "color": { "mode": "palette-classic" },
+          "min": 30
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["last", "min", "max"]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Approach A: timeSeriesTable (current — broken names)",
+      "type": "table",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 10 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose') AS \"Glucose\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN') AS \"BUN\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Creatinine') AS \"Creatinine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Sodium') AS \"Sodium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Potassium') AS \"Potassium\"\nFROM samples s\nWHERE s.metric IN ('Glucose', 'BUN', 'Creatinine', 'Sodium', 'Potassium')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time ORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        { "id": "timeSeriesTable", "options": {} }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "cellOptions": { "type": "auto" }, "align": "auto" },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/Trend|#/" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "sparkline", "drawStyle": "line", "lineWidth": 1, "fillOpacity": 15, "pointSize": 3, "showPoints": "always" }
+              }
+            ]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "md", "footer": { "show": false } }
+    },
+    {
+      "id": 3,
+      "title": "Approach B: separate queries per metric + timeSeriesTable",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 14 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"Glucose\" FROM samples s WHERE s.metric = 'Glucose' AND $__timeFilter(s.time) ORDER BY s.time",
+          "refId": "Glucose",
+          "editorMode": "code"
+        },
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"BUN\" FROM samples s WHERE s.metric = 'BUN' AND $__timeFilter(s.time) ORDER BY s.time",
+          "refId": "BUN",
+          "editorMode": "code"
+        },
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"Creatinine\" FROM samples s WHERE s.metric = 'Creatinine' AND $__timeFilter(s.time) ORDER BY s.time",
+          "refId": "Creatinine",
+          "editorMode": "code"
+        },
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"Sodium\" FROM samples s WHERE s.metric = 'Sodium' AND $__timeFilter(s.time) ORDER BY s.time",
+          "refId": "Sodium",
+          "editorMode": "code"
+        },
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time, s.value AS \"Potassium\" FROM samples s WHERE s.metric = 'Potassium' AND $__timeFilter(s.time) ORDER BY s.time",
+          "refId": "Potassium",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        { "id": "timeSeriesTable", "options": {} }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "cellOptions": { "type": "auto" }, "align": "auto" },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/Trend|#/" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "sparkline", "drawStyle": "line", "lineWidth": 1, "fillOpacity": 15, "pointSize": 3, "showPoints": "always" }
+              }
+            ]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "md", "footer": { "show": false } }
+    },
+    {
+      "id": 4,
+      "title": "Approach C: prepareTimeSeries multi + timeSeriesTable",
+      "type": "table",
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 14 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = 'Glucose') AS \"Glucose\",\n    MAX(s.value) FILTER (WHERE s.metric = 'BUN') AS \"BUN\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Creatinine') AS \"Creatinine\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Sodium') AS \"Sodium\",\n    MAX(s.value) FILTER (WHERE s.metric = 'Potassium') AS \"Potassium\"\nFROM samples s\nWHERE s.metric IN ('Glucose', 'BUN', 'Creatinine', 'Sodium', 'Potassium')\n  AND $__timeFilter(s.time)\n  AND s.value IS NOT NULL\nGROUP BY s.time ORDER BY s.time",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        { "id": "prepareTimeSeries", "options": { "format": "multi" } },
+        { "id": "timeSeriesTable", "options": {} }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "cellOptions": { "type": "auto" }, "align": "auto" },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/Trend|#/" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "sparkline", "drawStyle": "line", "lineWidth": 1, "fillOpacity": 15, "pointSize": 3, "showPoints": "always" }
+              }
+            ]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "md", "footer": { "show": false } }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["debug"],
+  "templating": { "list": [] },
+  "time": { "from": "now-5y", "to": "now" },
+  "timezone": "browser",
+  "title": "Debug: Sparkline Comparison",
+  "uid": "debug-sparkline",
+  "version": 2
+}
