@@ -1,14 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_POSTGRESQL",
-      "label": "PostgreSQL",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "postgres",
-      "pluginName": "PostgreSQL"
-    }
-  ],
   "__requires": [
     {
       "type": "grafana",
@@ -18,7 +8,7 @@
     },
     {
       "type": "datasource",
-      "id": "postgres",
+      "id": "grafana-postgresql-datasource",
       "name": "PostgreSQL",
       "version": "1.0.0"
     },
