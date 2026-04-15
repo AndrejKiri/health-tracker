@@ -480,6 +480,17 @@ def check_flags_against_references(results: list) -> None:
             cur.execute(sql, measurements)
             ref_map: dict = {row["measurement"]: row for row in cur.fetchall()}
 
+    # Surface measurements that have no stored reference range at all — helpful
+    # when new tests appear in a report that haven't been seeded yet.
+    no_ref = [m for m in measurements if m not in ref_map]
+    if no_ref:
+        logger.debug(
+            "No reference range found for %d measurement(s); flag cross-check "
+            "skipped for: %s",
+            len(no_ref),
+            ", ".join(sorted(no_ref)),
+        )
+
     for r in results:
         if r.value is None:
             continue
