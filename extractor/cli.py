@@ -21,7 +21,7 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ async def _run_extraction(pdf_path: str) -> dict:
     logger.info("Sending text to LLM (length=%d chars)…", len(text))
     result = await extract_from_text(text)
     result["source_file"] = Path(pdf_path).name
-    result["extracted_at"] = datetime.utcnow().isoformat()
+    result["extracted_at"] = datetime.now(timezone.utc).isoformat()
     return result
 
 
