@@ -307,6 +307,7 @@ Expected output:
   "lab_results": [
     {{"date": "2022-11-10", "category": "Other", "measurement": "Specific Gravity, Urine", "value": 1.015, "value_text": null, "unit": "", "flag": null}},
     {{"date": "2022-11-10", "category": "Blood Gas", "measurement": "pH", "value": 6.0, "value_text": null, "unit": "", "flag": null}},
+    {{"date": "2022-11-10", "category": "Other", "measurement": "Glucose, Urine", "value": null, "value_text": "Negative", "unit": "mg/dL", "flag": null}},
     {{"date": "2022-11-10", "category": "Other", "measurement": "Ketones, Urine", "value": null, "value_text": "Trace", "unit": "mg/dL", "flag": null}},
     {{"date": "2022-11-10", "category": "Thyroid", "measurement": "TSH", "value": 2.45, "value_text": null, "unit": "mIU/L", "flag": null}},
     {{"date": "2022-11-10", "category": "Thyroid", "measurement": "Free T4", "value": 1.22, "value_text": null, "unit": "ng/dL", "flag": null}},
