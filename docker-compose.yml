@@ -62,6 +62,7 @@ services:
       - ./data/processed:/data/processed
       - ./data/failed:/data/failed
       - ./db:/app/db
+      - ./reference_ranges.json:/app/reference_ranges.json:ro
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
