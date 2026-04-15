@@ -51,7 +51,11 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
                 _pool = psycopg2.pool.ThreadedConnectionPool(
                     minconn=1,
                     maxconn=10,
-                    dsn=config.db_dsn,
+                    host=config.db_host,
+                    port=config.db_port,
+                    dbname=config.db_name,
+                    user=config.db_user,
+                    password=config.db_password,
                 )
                 logger.info("Database connection pool established.")
                 break

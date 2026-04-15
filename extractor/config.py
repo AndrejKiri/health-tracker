@@ -27,16 +27,6 @@ class Config:
     processed_dir: str
     failed_dir: str
 
-    @property
-    def db_dsn(self) -> str:
-        """Build a psycopg2-compatible connection string."""
-        return (
-            f"host={self.db_host} "
-            f"port={self.db_port} "
-            f"dbname={self.db_name} "
-            f"user={self.db_user} "
-            f"password={self.db_password}"
-        )
 
 
 def load_config() -> Config:
