@@ -8,7 +8,7 @@ events, and are used both for LLM response validation and database insertion.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, field_validator, model_validator
 
@@ -108,7 +108,10 @@ class MedicalEvent(BaseModel):
 
     date: date
     end_date: Optional[date] = None
-    category: str          # e.g. "Imaging", "Procedure", "Diagnosis"
+    category: Literal[
+        "Imaging", "Procedure", "Diagnosis", "Medication",
+        "Vaccination", "Visit", "Other",
+    ]
     subcategory: Optional[str] = None  # e.g. "MRI", "CT", "Surgery"
     title: str
     description: Optional[str] = None
