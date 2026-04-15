@@ -144,8 +144,15 @@ def extract_pages(pdf_path: str) -> list[str]:
         try:
             from pdf2image import convert_from_path  # type: ignore[import]
 
-            # Only convert pages that need OCR (1-based page numbers)
-            first_page = needs_ocr_indices[0] + 1
+            # convert_from_path returns every page between first_page and
+            # last_page inclusive, not just the ones we asked about.
+            # needs_ocr_indices may be non-contiguous (e.g. pages 1 and 4),
+            # so we cannot use enumerate() to map image slots back to page
+            # indices — that would place page-2's image into page-4's slot.
+            # Instead, derive the image index as the offset from the first
+            # converted page so the mapping is always correct.
+            first_ocr_page_idx = needs_ocr_indices[0]
+            first_page = first_ocr_page_idx + 1          # 1-based for pdf2image
             last_page = needs_ocr_indices[-1] + 1
             images = convert_from_path(
                 pdf_path,
@@ -153,7 +160,8 @@ def extract_pages(pdf_path: str) -> list[str]:
                 first_page=first_page,
                 last_page=last_page,
             )
-            for img_idx, page_idx in enumerate(needs_ocr_indices):
+            for page_idx in needs_ocr_indices:
+                img_idx = page_idx - first_ocr_page_idx
                 if img_idx < len(images):
                     logger.warning(
                         "OCR used for page %d of '%s'.", page_idx + 1, pdf_path
