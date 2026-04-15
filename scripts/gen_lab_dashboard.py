@@ -169,7 +169,7 @@ def make_table_panel(panel_id, category, measurements, x, y):
     sql = (
         # CTE gets the most recent value per metric efficiently
         "WITH last_vals AS (\n"
-        "  SELECT DISTINCT ON (metric) metric, value\n"
+        "  SELECT DISTINCT ON (metric) metric, value, time::date AS last_date\n"
         "  FROM samples\n"
         "  ORDER BY metric, time DESC\n"
         ")\n"
@@ -185,6 +185,7 @@ def make_table_panel(panel_id, category, measurements, x, y):
         "      '[]'\n"
         "    ) AS \"Trend\",\n"
         "    lv.value AS \"Last\",\n"
+        "    lv.last_date AS \"Last Tested\",\n"
         # Status: compare last value against standard reference range
         "    CASE\n"
         "      WHEN lv.value IS NULL THEN NULL\n"
@@ -274,6 +275,14 @@ def make_table_panel(panel_id, category, measurements, x, y):
                         },
                     ],
                 },
+            ],
+        },
+        # Last Tested: date of most recent sample
+        {
+            "matcher": {"id": "byName", "options": "Last Tested"},
+            "properties": [
+                {"id": "custom.width", "value": 100},
+                {"id": "custom.align", "value": "right"},
             ],
         },
         # Description: truncated preview; click opens inspect drawer with full text
