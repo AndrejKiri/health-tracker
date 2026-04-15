@@ -1,7 +1,7 @@
 apiVersion: 1
 datasources:
   - name: PostgreSQL
-    type: postgres
+    type: grafana-postgresql-datasource
     uid: postgres
     url: postgres:5432
     database: health_tracker
