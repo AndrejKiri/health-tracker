@@ -6,6 +6,8 @@ All settings are driven by environment variables with sensible defaults.
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
 
 @dataclass(frozen=True)
 class Config:
@@ -33,7 +35,10 @@ def load_config() -> Config:
     """
     Load configuration from environment variables.
     Falls back to sensible defaults for local/Docker Compose development.
+    Calls load_dotenv() so a .env file in the working directory is
+    respected when running the extractor outside of Docker Compose.
     """
+    load_dotenv()  # no-op if .env does not exist
     return Config(
         # Ollama
         ollama_url=os.environ.get("OLLAMA_URL", "http://ollama:11434"),
