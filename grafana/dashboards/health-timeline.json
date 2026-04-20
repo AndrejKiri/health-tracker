@@ -2689,7 +2689,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Value\", measurement FROM lab_results WHERE measurement IN ($measurement) AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Value\", measurement FROM lab_results WHERE measurement IN (${measurement:sqlstring}) AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2744,7 +2744,7 @@
           "displayMode": "table",
           "placement": "right",
           "calcs": [
-            "last",
+            "lastNotNull",
             "min",
             "max",
             "mean"
@@ -2788,7 +2788,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.reference_low, rr.reference_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.measurement WHERE lr.flag IS NOT NULL AND $__timeFilter(lr.date) ORDER BY lr.date DESC",
+          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.ref_low, rr.ref_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.metric WHERE lr.flag IS NOT NULL AND $__timeFilter(lr.date) ORDER BY lr.date DESC",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2945,7 +2945,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.reference_low, rr.reference_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.measurement WHERE $__timeFilter(lr.date) AND (lr.category IN ($category) OR '$category' = 'All') AND (lr.measurement IN ($measurement) OR '$measurement' = 'All') ORDER BY lr.date DESC",
+          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.ref_low, rr.ref_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.metric WHERE $__timeFilter(lr.date) AND lr.category IN (${category:sqlstring}) AND lr.measurement IN (${measurement:sqlstring}) ORDER BY lr.date DESC",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -3096,28 +3096,30 @@
         "refresh": 1,
         "regex": "",
         "sort": 1,
-        "type": "query",
-        "allValue": "All"
+        "type": "query"
       },
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": ["WBC", "Hemoglobin", "Glucose", "Creatinine"],
+          "value": ["WBC", "Hemoglobin", "Glucose", "Creatinine"]
+        },
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "postgres"
         },
-        "definition": "SELECT DISTINCT name FROM metrics WHERE category IN ($category) ORDER BY name",
+        "definition": "SELECT DISTINCT name FROM metrics WHERE category IN (${category:sqlstring}) ORDER BY name",
         "hide": 0,
         "includeAll": true,
         "label": "Measurement",
         "multi": true,
         "name": "measurement",
         "options": [],
-        "query": "SELECT DISTINCT name FROM metrics WHERE category IN ($category) ORDER BY name",
+        "query": "SELECT DISTINCT name FROM metrics WHERE category IN (${category:sqlstring}) ORDER BY name",
         "refresh": 2,
         "regex": "",
         "sort": 1,
-        "type": "query",
-        "allValue": "All"
+        "type": "query"
       }
     ]
   },
