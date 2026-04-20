@@ -78,7 +78,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value, time::date AS last_date\n  FROM samples\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    lv.last_date AS \"Last Tested\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    m.description AS \"Description\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Lipid Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value, time::date AS last_date\n  FROM samples\n  WHERE document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))\n  ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'\n         AND s2.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    lv.last_date AS \"Last Tested\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    m.description AS \"Description\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Lipid Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -149,7 +149,7 @@
                 "value": [
                   {
                     "title": "Detail: ${__data.fields.Name}",
-                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&var-subject=${subject}&${__url_time_range}",
                     "targetBlank": false
                   }
                 ]
@@ -292,7 +292,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = \"Total Cholesterol\") AS \"Total Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = \"LDL Cholesterol\") AS \"LDL\",\n    MAX(s.value) FILTER (WHERE s.metric = \"HDL Cholesterol\") AS \"HDL\",\n    MAX(s.value) FILTER (WHERE s.metric = \"Triglycerides\") AS \"Triglycerides\"\nFROM samples s\nWHERE s.metric IN (\"Total Cholesterol\", \"LDL Cholesterol\", \"HDL Cholesterol\", \"Triglycerides\")\n  AND $__timeFilter(s.time)\nGROUP BY s.time\nORDER BY s.time",
+          "rawSql": "SELECT s.time,\n    MAX(s.value) FILTER (WHERE s.metric = \"Total Cholesterol\") AS \"Total Cholesterol\",\n    MAX(s.value) FILTER (WHERE s.metric = \"LDL Cholesterol\") AS \"LDL\",\n    MAX(s.value) FILTER (WHERE s.metric = \"HDL Cholesterol\") AS \"HDL\",\n    MAX(s.value) FILTER (WHERE s.metric = \"Triglycerides\") AS \"Triglycerides\"\nFROM samples s\nWHERE s.metric IN (\"Total Cholesterol\", \"LDL Cholesterol\", \"HDL Cholesterol\", \"Triglycerides\")\n  AND $__timeFilter(s.time)\n  AND s.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))\nGROUP BY s.time\nORDER BY s.time",
           "refId": "A",
           "editorMode": "code"
         }
@@ -338,7 +338,28 @@
     "showcase"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "type": "query",
+        "name": "subject",
+        "label": "Dataset",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "definition": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "query": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "current": {},
+        "options": [],
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": null,
+        "multi": false,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
   },
   "time": {
     "from": "now-5y",

@@ -60,14 +60,14 @@
         "hide": false,
         "iconColor": "#5794F2",
         "name": "Medical Events",
-        "rawQuery": "SELECT date::timestamptz as time, end_date::timestamptz as timeend, title as text, category || ' \u2014 ' || COALESCE(subcategory, '') || ': ' || COALESCE(description,'') as tags FROM events WHERE $__timeFilter(date::timestamptz) ORDER BY date",
+        "rawQuery": "SELECT date::timestamptz as time, end_date::timestamptz as timeend, title as text, category || ' — ' || COALESCE(subcategory, '') || ': ' || COALESCE(description,'') as tags FROM events WHERE $__timeFilter(date::timestamptz) AND subject IN (${subject:sqlstring}) ORDER BY date",
         "showIn": 0,
         "step": "60s",
         "type": "tags"
       }
     ]
   },
-  "description": "Comprehensive health lab results dashboard \u2014 visualizes lab trends, reference ranges, medical events, and out-of-range results over time.",
+  "description": "Comprehensive health lab results dashboard — visualizes lab trends, reference ranges, medical events, and out-of-range results over time.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -109,7 +109,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) as \"Total Lab Results\" FROM lab_results",
+          "rawSql": "SELECT COUNT(*) as \"Total Lab Results\" FROM lab_results WHERE subject IN (${subject:sqlstring})",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -267,7 +267,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT TO_CHAR(MIN(date), 'YYYY-MM-DD') || ' to ' || TO_CHAR(MAX(date), 'YYYY-MM-DD') as \"Date Range\" FROM lab_results",
+          "rawSql": "SELECT TO_CHAR(MIN(date), 'YYYY-MM-DD') || ' to ' || TO_CHAR(MAX(date), 'YYYY-MM-DD') as \"Date Range\" FROM lab_results WHERE subject IN (${subject:sqlstring})",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -346,7 +346,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) as \"Flagged Results\" FROM lab_results WHERE flag IN ('H','L')",
+          "rawSql": "SELECT COUNT(*) as \"Flagged Results\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND flag IN ('H','L')",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -438,7 +438,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, category || ': ' || title as \"Event\", category FROM events WHERE $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, category || ': ' || title as \"Event\", category FROM events WHERE $__timeFilter(date) AND subject IN (${subject:sqlstring}) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -533,7 +533,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"WBC\" FROM lab_results WHERE measurement = 'WBC' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"WBC\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'WBC' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -631,7 +631,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Hemoglobin\" FROM lab_results WHERE measurement = 'Hemoglobin' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Hemoglobin\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Hemoglobin' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -729,7 +729,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Platelets\" FROM lab_results WHERE measurement = 'Platelets' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Platelets\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Platelets' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -827,7 +827,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"RBC\" FROM lab_results WHERE measurement = 'RBC' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"RBC\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'RBC' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -938,7 +938,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Glucose\" FROM lab_results WHERE measurement = 'Glucose' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Glucose\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Glucose' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1036,7 +1036,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Creatinine\" FROM lab_results WHERE measurement = 'Creatinine' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Creatinine\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Creatinine' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1134,7 +1134,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Sodium\" FROM lab_results WHERE measurement = 'Sodium' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Sodium\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Sodium' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1232,7 +1232,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Potassium\" FROM lab_results WHERE measurement = 'Potassium' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Potassium\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Potassium' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1343,7 +1343,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"ALT\" FROM lab_results WHERE measurement = 'ALT' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"ALT\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'ALT' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1441,7 +1441,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"AST\" FROM lab_results WHERE measurement = 'AST' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"AST\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'AST' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1539,7 +1539,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Alk Phos\" FROM lab_results WHERE measurement = 'Alk Phos' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Alk Phos\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Alk Phos' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1637,7 +1637,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Total Bilirubin\" FROM lab_results WHERE measurement = 'Total Bilirubin' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Total Bilirubin\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Total Bilirubin' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1748,7 +1748,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Total Cholesterol\" FROM lab_results WHERE measurement = 'Total Cholesterol' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Total Cholesterol\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Total Cholesterol' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1846,7 +1846,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"HDL Cholesterol\" FROM lab_results WHERE measurement = 'HDL Cholesterol' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"HDL Cholesterol\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'HDL Cholesterol' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -1944,7 +1944,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"LDL Cholesterol\" FROM lab_results WHERE measurement = 'LDL Cholesterol' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"LDL Cholesterol\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'LDL Cholesterol' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2042,7 +2042,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Triglycerides\" FROM lab_results WHERE measurement = 'Triglycerides' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Triglycerides\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Triglycerides' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2153,7 +2153,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"CRP\" FROM lab_results WHERE measurement = 'CRP' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"CRP\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'CRP' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2261,7 +2261,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"ESR\" FROM lab_results WHERE measurement = 'ESR' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"ESR\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'ESR' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2372,7 +2372,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"TSH\" FROM lab_results WHERE measurement = 'TSH' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"TSH\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'TSH' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2480,7 +2480,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Free T4\" FROM lab_results WHERE measurement = 'Free T4' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Free T4\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Free T4' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2578,7 +2578,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Free T3\" FROM lab_results WHERE measurement = 'Free T3' AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Free T3\" FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement = 'Free T3' AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2656,7 +2656,7 @@
     },
     {
       "id": 35,
-      "title": "Dynamic View \u2014 Selected Measurements",
+      "title": "Dynamic View — Selected Measurements",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -2689,7 +2689,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date as time, value as \"Value\", measurement FROM lab_results WHERE measurement IN (${measurement:sqlstring}) AND $__timeFilter(date) ORDER BY date",
+          "rawSql": "SELECT date as time, value as \"Value\", measurement FROM lab_results WHERE subject IN (${subject:sqlstring}) AND measurement IN (${measurement:sqlstring}) AND $__timeFilter(date) ORDER BY date",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2788,7 +2788,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.ref_low, rr.ref_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.metric WHERE lr.flag IS NOT NULL AND $__timeFilter(lr.date) ORDER BY lr.date DESC",
+          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.ref_low, rr.ref_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.metric WHERE subject IN (${subject:sqlstring}) AND lr.flag IS NOT NULL AND $__timeFilter(lr.date) ORDER BY lr.date DESC",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -2945,7 +2945,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.ref_low, rr.ref_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.metric WHERE $__timeFilter(lr.date) AND lr.category IN (${category:sqlstring}) AND lr.measurement IN (${measurement:sqlstring}) ORDER BY lr.date DESC",
+          "rawSql": "SELECT lr.date, lr.category, lr.measurement, lr.value, lr.unit, lr.flag, rr.ref_low, rr.ref_high FROM lab_results lr LEFT JOIN reference_ranges rr ON lr.measurement = rr.metric WHERE subject IN (${subject:sqlstring}) AND $__timeFilter(lr.date) AND lr.category IN (${category:sqlstring}) AND lr.measurement IN (${measurement:sqlstring}) ORDER BY lr.date DESC",
           "refId": "A",
           "editorMode": "code",
           "sql": {
@@ -3080,6 +3080,26 @@
   "templating": {
     "list": [
       {
+        "type": "query",
+        "name": "subject",
+        "label": "Dataset",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "definition": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "query": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "current": {},
+        "options": [],
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": null,
+        "multi": false,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
         "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -3101,8 +3121,18 @@
       {
         "current": {
           "selected": true,
-          "text": ["WBC", "Hemoglobin", "Glucose", "Creatinine"],
-          "value": ["WBC", "Hemoglobin", "Glucose", "Creatinine"]
+          "text": [
+            "WBC",
+            "Hemoglobin",
+            "Glucose",
+            "Creatinine"
+          ],
+          "value": [
+            "WBC",
+            "Hemoglobin",
+            "Glucose",
+            "Creatinine"
+          ]
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",

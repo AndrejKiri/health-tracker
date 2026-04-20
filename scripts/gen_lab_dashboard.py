@@ -4,6 +4,38 @@ import json
 
 DS = {"type": "grafana-postgresql-datasource", "uid": "postgres"}
 
+SUBJECT_VAR = {
+    "type": "query",
+    "name": "subject",
+    "label": "Dataset",
+    "datasource": DS,
+    "definition": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+    "query": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+    "current": {},
+    "options": [],
+    "refresh": 2,
+    "includeAll": True,
+    "allValue": None,
+    "multi": False,
+    "sort": 0,
+    "hide": 0,
+    "skipUrlSync": False,
+}
+
+# Subquery used to filter samples by subject variable
+_SUBJECT_FILTER = (
+    "s2.document_id IN "
+    "(SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))"
+)
+_SUBJECT_FILTER_LAST_VALS = (
+    "document_id IN "
+    "(SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))"
+)
+_SUBJECT_FILTER_S = (
+    "s.document_id IN "
+    "(SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))"
+)
+
 # Categories in display order: (measurement, unit, ref_low, ref_high)
 CATEGORIES = [
     ("Complete Blood Count", [
@@ -167,26 +199,25 @@ def make_table_panel(panel_id, category, measurements, x, y):
     cat_escaped = category.replace("'", "''")
 
     sql = (
-        # CTE gets the most recent value per metric efficiently
         "WITH last_vals AS (\n"
         "  SELECT DISTINCT ON (metric) metric, value, time::date AS last_date\n"
         "  FROM samples\n"
+        f"  WHERE {_SUBJECT_FILTER_LAST_VALS}\n"
         "  ORDER BY metric, time DESC\n"
         ")\n"
         "SELECT\n"
         "    m.name AS \"Name\",\n"
         "    m.unit AS \"Unit\",\n"
-        # Sparkline: fixed 1-year window regardless of dashboard time range
         "    COALESCE(\n"
         "      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n"
         "       FROM samples s2\n"
         "       WHERE s2.metric = m.name\n"
-        "         AND s2.time >= NOW() - INTERVAL '1 year'),\n"
+        "         AND s2.time >= NOW() - INTERVAL '1 year'\n"
+        f"         AND {_SUBJECT_FILTER}),\n"
         "      '[]'\n"
         "    ) AS \"Trend\",\n"
         "    lv.value AS \"Last\",\n"
         "    lv.last_date AS \"Last Tested\",\n"
-        # Status: compare last value against standard reference range
         "    CASE\n"
         "      WHEN lv.value IS NULL THEN NULL\n"
         "      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n"
@@ -237,7 +268,7 @@ def make_table_panel(panel_id, category, measurements, x, y):
                     "value": [
                         {
                             "title": "Detail: ${__data.fields.Name}",
-                            "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                            "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&var-subject=${subject}&${__url_time_range}",
                             "targetBlank": False,
                         }
                     ],
@@ -428,7 +459,7 @@ def build_dashboard():
         "panels": panels,
         "schemaVersion": 39,
         "tags": ["health", "lab-results"],
-        "templating": {"list": []},
+        "templating": {"list": [SUBJECT_VAR]},
         "time": {"from": "now-5y", "to": "now"},
         "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]},
         "timezone": "browser",
@@ -528,16 +559,18 @@ def make_detail_dashboard():
         "FROM samples s\n"
         "WHERE s.metric = '$metric'\n"
         "  AND $__timeFilter(s.time)\n"
+        f"  AND {_SUBJECT_FILTER_S}\n"
         "ORDER BY s.time"
     )
 
-    # Two-point flat lines for ref_low / ref_high across the data time span
     refrange_sql = (
         "SELECT t.time::timestamptz, rr.ref_low AS \"Ref Low\", rr.ref_high AS \"Ref High\"\n"
         "FROM (\n"
         "  SELECT MIN(time) AS time FROM samples WHERE metric = '$metric'\n"
+        f"    AND {_SUBJECT_FILTER_LAST_VALS}\n"
         "  UNION ALL\n"
-        "  SELECT MAX(time)          FROM samples WHERE metric = '$metric'\n"
+        "  SELECT MAX(time) FROM samples WHERE metric = '$metric'\n"
+        f"    AND {_SUBJECT_FILTER_LAST_VALS}\n"
         ") t\n"
         "CROSS JOIN (\n"
         "  SELECT ref_low, ref_high FROM reference_ranges\n"
@@ -638,7 +671,7 @@ def make_detail_dashboard():
         "panels": [info_panel, timeseries_panel],
         "schemaVersion": 39,
         "tags": ["health", "lab-results"],
-        "templating": {"list": [metric_var]},
+        "templating": {"list": [SUBJECT_VAR, metric_var]},
         "time": {"from": "now-5y", "to": "now"},
         "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]},
         "timezone": "browser",
@@ -667,6 +700,7 @@ def make_timeseries_panel(panel_id, title, metrics, x, y, w=24, h=12):
         f"FROM samples s\n"
         f"WHERE s.metric IN ({metric_list})\n"
         f"  AND $__timeFilter(s.time)\n"
+        f"  AND {_SUBJECT_FILTER_S}\n"
         f"GROUP BY s.time\n"
         f"ORDER BY s.time"
     )
@@ -789,7 +823,7 @@ def make_showcase_dashboard():
         "panels": [table_panel, ts_panel],
         "schemaVersion": 39,
         "tags": ["health", "lab-results", "showcase"],
-        "templating": {"list": []},
+        "templating": {"list": [SUBJECT_VAR]},
         "time": {"from": "now-5y", "to": "now"},
         "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]},
         "timezone": "browser",

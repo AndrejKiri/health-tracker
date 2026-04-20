@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -21,14 +24,25 @@
       "id": 1,
       "title": "Reference: Timeseries Panel (Glucose)",
       "type": "timeseries",
-      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 10 },
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
       "targets": [
         {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"Glucose\" FROM samples s WHERE s.metric = 'Glucose' AND $__timeFilter(s.time) ORDER BY s.time",
+          "rawSql": "SELECT s.time, s.value AS \"Glucose\" FROM samples s WHERE s.metric = 'Glucose' AND $__timeFilter(s.time) AND s.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring})) ORDER BY s.time",
           "refId": "A",
           "editorMode": "code"
         }
@@ -40,28 +54,48 @@
             "fillOpacity": 10,
             "pointSize": 6,
             "showPoints": "always",
-            "thresholdsStyle": { "mode": "area" }
+            "thresholdsStyle": {
+              "mode": "area"
+            }
           },
           "unit": "mg/dL",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 70 },
-              { "color": "red", "value": 100 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
             ]
           },
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "min": 30
         },
         "overrides": []
       },
       "options": {
-        "tooltip": { "mode": "multi", "sort": "none" },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "calcs": ["last", "min", "max"]
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
         }
       }
     },
@@ -70,14 +104,25 @@
       "title": "SQL Array Method: Metabolic Panel — with Status + 1-year sparklines",
       "description": "Sparklines show last 1 year. Status column (H/L/OK) is coloured based on reference range. Name column links to detail dashboard.",
       "type": "table",
-      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 10 },
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
       "targets": [
         {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value FROM samples ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    m.description AS \"Description\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name AND rr.range_type = 'standard' AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
+          "rawSql": "WITH last_vals AS (\n  SELECT DISTINCT ON (metric) metric, value FROM samples WHERE document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring})) ORDER BY metric, time DESC\n)\nSELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND s2.time >= NOW() - INTERVAL '1 year'\n         AND s2.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))),\n      '[]'\n    ) AS \"Trend\",\n    lv.value AS \"Last\",\n    CASE\n      WHEN lv.value IS NULL THEN NULL\n      WHEN rr.ref_high IS NOT NULL AND lv.value > rr.ref_high THEN 'H'\n      WHEN rr.ref_low  IS NOT NULL AND lv.value < rr.ref_low  THEN 'L'\n      WHEN rr.ref_low IS NULL AND rr.ref_high IS NULL THEN NULL\n      ELSE 'OK'\n    END AS \"Status\",\n    m.description AS \"Description\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name AND rr.range_type = 'standard' AND rr.sex IS NULL\nLEFT JOIN last_vals lv ON lv.metric = m.name\nWHERE m.category = 'Metabolic Panel'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -87,7 +132,10 @@
           "id": "convertFieldType",
           "options": {
             "conversions": [
-              { "targetField": "Trend", "destinationType": "other" }
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
             ]
           }
         }
@@ -95,14 +143,21 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "cellOptions": { "type": "auto" },
+            "cellOptions": {
+              "type": "auto"
+            },
             "align": "auto"
           },
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Trend" },
+            "matcher": {
+              "id": "byName",
+              "options": "Trend"
+            },
             "properties": [
               {
                 "id": "custom.cellOptions",
@@ -115,41 +170,114 @@
                   "showPoints": "always"
                 }
               },
-              { "id": "custom.width", "value": 300 }
+              {
+                "id": "custom.width",
+                "value": 300
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Name" },
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
             "properties": [
-              { "id": "custom.width", "value": 180 },
-              { "id": "links", "value": [{ "title": "Detail: ${__data.fields.Name}", "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}", "targetBlank": false }] }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Unit" },
-            "properties": [{ "id": "custom.width", "value": 75 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Status" },
-            "properties": [
-              { "id": "custom.width", "value": 60 },
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
-              { "id": "mappings", "value": [
-                { "type": "value", "options": {
-                    "H":  { "text": "↑ H", "color": "red",    "index": 0 },
-                    "L":  { "text": "↓ L", "color": "orange", "index": 1 },
-                    "OK": { "text": "✓",   "color": "green",  "index": 2 }
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Detail: ${__data.fields.Name}",
+                    "url": "/d/lab-metric-detail?var-metric=${__data.fields.Name}&${__url_time_range}",
+                    "targetBlank": false
                   }
-                },
-                { "type": "special", "options": { "match": "null", "result": { "text": "—", "color": "text", "index": 3 } } }
-              ]}
+                ]
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Description" },
+            "matcher": {
+              "id": "byName",
+              "options": "Unit"
+            },
             "properties": [
-              { "id": "custom.width", "value": 60 },
-              { "id": "custom.inspect", "value": true }
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "H": {
+                        "text": "↑ H",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "L": {
+                        "text": "↓ L",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "OK": {
+                        "text": "✓",
+                        "color": "green",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "—",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Description"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
             ]
           }
         ]
@@ -157,7 +285,9 @@
       "options": {
         "showHeader": true,
         "cellHeight": "md",
-        "footer": { "show": false }
+        "footer": {
+          "show": false
+        }
       }
     },
     {
@@ -165,14 +295,25 @@
       "title": "SQL Array Method: Complete Blood Count (sparkline table)",
       "description": "Second category to verify the approach scales across different metric types.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 10, "w": 24, "h": 14 },
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
       "targets": [
         {
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres" },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Complete Blood Count'\nORDER BY m.sort_order",
+          "rawSql": "SELECT\n    m.name AS \"Name\",\n    m.unit AS \"Unit\",\n    COALESCE(\n      (SELECT array_to_json(array_agg(s2.value ORDER BY s2.time))\n       FROM samples s2\n       WHERE s2.metric = m.name\n         AND $__timeFilter(s2.time)\n         AND s2.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))),\n      '[]'\n    ) AS \"Trend\",\n    (SELECT s3.value\n     FROM samples s3\n     WHERE s3.metric = m.name\n     AND s3.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))\n     ORDER BY s3.time DESC\n     LIMIT 1) AS \"Last\",\n    rr.ref_low AS \"Ref Low\",\n    rr.ref_high AS \"Ref High\"\nFROM metrics m\nLEFT JOIN reference_ranges rr\n    ON rr.metric = m.name\n    AND rr.range_type = 'standard'\n    AND rr.sex IS NULL\nWHERE m.category = 'Complete Blood Count'\nORDER BY m.sort_order",
           "refId": "A",
           "editorMode": "code"
         }
@@ -182,7 +323,10 @@
           "id": "convertFieldType",
           "options": {
             "conversions": [
-              { "targetField": "Trend", "destinationType": "other" }
+              {
+                "targetField": "Trend",
+                "destinationType": "other"
+              }
             ]
           }
         }
@@ -190,14 +334,21 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "cellOptions": { "type": "auto" },
+            "cellOptions": {
+              "type": "auto"
+            },
             "align": "auto"
           },
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Trend" },
+            "matcher": {
+              "id": "byName",
+              "options": "Trend"
+            },
             "properties": [
               {
                 "id": "custom.cellOptions",
@@ -210,19 +361,34 @@
                   "showPoints": "always"
                 }
               },
-              { "id": "custom.width", "value": 300 }
+              {
+                "id": "custom.width",
+                "value": 300
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Name" },
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
             "properties": [
-              { "id": "custom.width", "value": 200 }
+              {
+                "id": "custom.width",
+                "value": 200
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Unit" },
+            "matcher": {
+              "id": "byName",
+              "options": "Unit"
+            },
             "properties": [
-              { "id": "custom.width", "value": 80 }
+              {
+                "id": "custom.width",
+                "value": 80
+              }
             ]
           }
         ]
@@ -230,14 +396,44 @@
       "options": {
         "showHeader": true,
         "cellHeight": "md",
-        "footer": { "show": false }
+        "footer": {
+          "show": false
+        }
       }
     }
   ],
   "schemaVersion": 39,
-  "tags": ["debug"],
-  "templating": { "list": [] },
-  "time": { "from": "now-5y", "to": "now" },
+  "tags": [
+    "debug"
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "subject",
+        "label": "Dataset",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "definition": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "query": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "current": {},
+        "options": [],
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": null,
+        "multi": false,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-5y",
+    "to": "now"
+  },
   "timezone": "browser",
   "title": "Debug: Sparkline Comparison",
   "uid": "debug-sparkline",
