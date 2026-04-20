@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 3
 _BASE_BACKOFF = 2.0        # seconds (doubled each retry)
-_REQUEST_TIMEOUT = 120.0   # seconds per individual request
+_REQUEST_TIMEOUT = 600.0   # seconds per individual request
 
 # Regex to extract a JSON block from LLM output that may include
 # markdown code fences (```json ... ```) or bare JSON.
@@ -165,7 +165,7 @@ async def extract_from_text(
         "stream": False,
         "options": {
             "temperature": 0.0,   # deterministic extraction
-            "num_predict": 8192,  # generous token budget for large panels
+            "num_predict": 2048,  # sufficient for structured lab JSON on CPU
         },
     }
 
