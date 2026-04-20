@@ -128,7 +128,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT s.time, s.value AS \"Value\"\nFROM samples s\nWHERE s.metric = '$metric'\n  AND $__timeFilter(s.time)\nORDER BY s.time",
+          "rawSql": "SELECT s.time, s.value AS \"Value\"\nFROM samples s\nWHERE s.metric = '$metric'\n  AND $__timeFilter(s.time)\n  AND s.document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))\nORDER BY s.time",
           "refId": "A",
           "editorMode": "code"
         },
@@ -139,7 +139,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT t.time::timestamptz, rr.ref_low AS \"Ref Low\", rr.ref_high AS \"Ref High\"\nFROM (\n  SELECT MIN(time) AS time FROM samples WHERE metric = '$metric'\n  UNION ALL\n  SELECT MAX(time)          FROM samples WHERE metric = '$metric'\n) t\nCROSS JOIN (\n  SELECT ref_low, ref_high FROM reference_ranges\n  WHERE metric = '$metric' AND range_type = 'standard' AND sex IS NULL\n  LIMIT 1\n) rr\nWHERE rr.ref_low IS NOT NULL OR rr.ref_high IS NOT NULL\nORDER BY t.time",
+          "rawSql": "SELECT t.time::timestamptz, rr.ref_low AS \"Ref Low\", rr.ref_high AS \"Ref High\"\nFROM (\n  SELECT MIN(time) AS time FROM samples WHERE metric = '$metric'\n    AND document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))\n  UNION ALL\n  SELECT MAX(time) FROM samples WHERE metric = '$metric'\n    AND document_id IN (SELECT id FROM documents WHERE subject IN (${subject:sqlstring}))\n) t\nCROSS JOIN (\n  SELECT ref_low, ref_high FROM reference_ranges\n  WHERE metric = '$metric' AND range_type = 'standard' AND sex IS NULL\n  LIMIT 1\n) rr\nWHERE rr.ref_low IS NOT NULL OR rr.ref_high IS NOT NULL\nORDER BY t.time",
           "refId": "Ref",
           "editorMode": "code",
           "hide": false
@@ -261,6 +261,26 @@
   ],
   "templating": {
     "list": [
+      {
+        "type": "query",
+        "name": "subject",
+        "label": "Dataset",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "definition": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "query": "SELECT DISTINCT subject FROM documents ORDER BY subject",
+        "current": {},
+        "options": [],
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": null,
+        "multi": false,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      },
       {
         "type": "query",
         "name": "metric",
