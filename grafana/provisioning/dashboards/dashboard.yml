@@ -6,5 +6,5 @@ providers:
     disableDeletion: false
     editable: true
     options:
-      path: /var/lib/grafana/dashboards
+      path: ${GRAFANA_DASHBOARDS_PATH}
       foldersFromFilesStructure: false
