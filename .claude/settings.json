@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(psql:*)",
+      "Bash(pg_dump:*)",
+      "Bash(pg_restore:*)"
+    ]
+  }
+}

@@ -121,3 +121,9 @@ start: db-start ollama-start grafana-start ## Start all services (DB + Ollama + 
 
 .PHONY: stop
 stop: grafana-stop ollama-stop db-stop ## Stop all services
+
+# ── Data summaries ────────────────────────────────────────────────────────────
+
+.PHONY: summary
+summary: ## Generate data/summaries/metrics_summary.json (gitignored, Claude-readable)
+	$(VENV_PYTHON) scripts/generate_summary.py

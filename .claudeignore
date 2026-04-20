@@ -1,0 +1,9 @@
+# Raw health data — Claude Code must not read these
+data/inbox/
+data/processed/
+data/failed/
+backups/
+
+# Credentials
+.env
+.env.*
