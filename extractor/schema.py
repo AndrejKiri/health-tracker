@@ -21,6 +21,37 @@ _MIN_YEAR = 1950
 _MAX_YEAR = 2050
 _VALID_FLAGS = {"H", "L", None}
 
+# Formats tried in order when the input is not ISO 8601.
+# Handles common LLM outputs like "June 15, 2024" or "15 Jun 2024".
+_DATE_FORMATS = [
+    "%B %d, %Y",   # June 15, 2024
+    "%b %d, %Y",   # Jun 15, 2024
+    "%d %B %Y",    # 15 June 2024
+    "%d %b %Y",    # 15 Jun 2024
+    "%m/%d/%Y",    # 06/15/2024
+    "%Y/%m/%d",    # 2024/06/15
+]
+
+
+def _parse_date(v: object) -> date:
+    if isinstance(v, date) and not isinstance(v, datetime):
+        return v
+    if isinstance(v, datetime):
+        return v.date()
+    if not isinstance(v, str):
+        raise ValueError(f"Cannot parse date from {v!r}")
+    v = v.strip()
+    try:
+        return date.fromisoformat(v)
+    except ValueError:
+        pass
+    for fmt in _DATE_FORMATS:
+        try:
+            return datetime.strptime(v, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(f"Unrecognised date format: {v!r}")
+
 
 # ---------------------------------------------------------------------------
 # Lab Result
@@ -45,15 +76,8 @@ class LabResult(BaseModel):
     @field_validator("date", mode="before")
     @classmethod
     def validate_date_range(cls, v: object) -> object:
-        """Reject dates outside a reasonable human lifespan window."""
-        d: date
-        if isinstance(v, str):
-            d = date.fromisoformat(v)
-        elif isinstance(v, date):
-            d = v
-        else:
-            raise ValueError(f"Cannot parse date from {v!r}")
-
+        """Normalise and reject dates outside a reasonable human lifespan window."""
+        d = _parse_date(v)
         if not (_MIN_YEAR <= d.year <= _MAX_YEAR):
             raise ValueError(
                 f"Date {d} is outside the accepted range "
@@ -121,14 +145,7 @@ class MedicalEvent(BaseModel):
     def validate_date_range(cls, v: object) -> Optional[object]:
         if v is None or v == "":
             return None
-        d: date
-        if isinstance(v, str):
-            d = date.fromisoformat(v)
-        elif isinstance(v, date):
-            d = v
-        else:
-            raise ValueError(f"Cannot parse date from {v!r}")
-
+        d = _parse_date(v)
         if not (_MIN_YEAR <= d.year <= _MAX_YEAR):
             raise ValueError(
                 f"Date {d} is outside the accepted range "
