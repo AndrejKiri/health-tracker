@@ -17,6 +17,7 @@ import json
 import logging
 import re
 import time
+from datetime import date as _date
 from typing import Any
 
 import httpx
@@ -41,6 +42,54 @@ _JSON_BLOCK_RE = re.compile(
     r"```(?:json)?\s*([\s\S]+?)\s*```",
     re.IGNORECASE,
 )
+
+# Patterns for dates commonly found in lab reports.
+# Tries ISO first, then "Month DD, YYYY", then "DD Month YYYY".
+_DATE_PATTERNS = [
+    re.compile(r"\b(\d{4}-\d{2}-\d{2})\b"),
+    re.compile(
+        r"\b(January|February|March|April|May|June|July|August|September|"
+        r"October|November|December)\s+(\d{1,2}),?\s+(\d{4})\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+(\d{4})\b",
+        re.IGNORECASE,
+    ),
+]
+
+_MONTH_MAP = {
+    "january": 1, "february": 2, "march": 3, "april": 4,
+    "may": 5, "june": 6, "july": 7, "august": 8,
+    "september": 9, "october": 10, "november": 11, "december": 12,
+}
+
+
+def _extract_fallback_date(text: str) -> str | None:
+    """Return the first parseable date found in the PDF text, as YYYY-MM-DD."""
+    # ISO format — instant match
+    m = _DATE_PATTERNS[0].search(text)
+    if m:
+        return m.group(1)
+
+    # "Month DD, YYYY"
+    m = _DATE_PATTERNS[1].search(text)
+    if m:
+        month = _MONTH_MAP[m.group(1).lower()]
+        day = int(m.group(2))
+        year = int(m.group(3))
+        return f"{year:04d}-{month:02d}-{day:02d}"
+
+    # "DD Month YYYY"
+    m = _DATE_PATTERNS[2].search(text)
+    if m:
+        day = int(m.group(1))
+        month = _MONTH_MAP[m.group(2).lower()]
+        year = int(m.group(3))
+        return f"{year:04d}-{month:02d}-{day:02d}"
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +135,7 @@ def _parse_json_from_response(text: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _validate_response(raw: dict[str, Any]) -> dict[str, Any]:
+def _validate_response(raw: dict[str, Any], fallback_date: str | None = None) -> dict[str, Any]:
     """
     Validate and normalise the LLM JSON output against Pydantic schemas.
 
@@ -100,6 +149,9 @@ def _validate_response(raw: dict[str, Any]) -> dict[str, Any]:
     errors: list[str] = []
 
     for item in raw.get("lab_results", []):
+        if item.get("date") is None and fallback_date:
+            logger.info("Patching null date → %s for: %s", fallback_date, item.get("measurement"))
+            item = {**item, "date": fallback_date}
         try:
             lr = LabResult.model_validate(item)
             validated_results.append(lr.model_dump())
@@ -108,6 +160,8 @@ def _validate_response(raw: dict[str, Any]) -> dict[str, Any]:
             logger.warning("Skipping invalid lab result: %s | %s", exc, item)
 
     for item in raw.get("events", []):
+        if item.get("date") is None and fallback_date:
+            item = {**item, "date": fallback_date}
         try:
             ev = MedicalEvent.model_validate(item)
             validated_events.append(ev.model_dump())
@@ -156,6 +210,9 @@ async def extract_from_text(
         After all retry attempts are exhausted.
     """
     model = model or config.ollama_model
+    fallback_date = _extract_fallback_date(text)
+    if fallback_date:
+        logger.info("Fallback date extracted from PDF text: %s", fallback_date)
     user_prompt = build_user_prompt(text)
 
     payload = {
@@ -206,7 +263,7 @@ async def extract_from_text(
             logger.debug("Raw LLM output (first 500 chars): %s", raw_response[:500])
 
             parsed = _parse_json_from_response(raw_response)
-            validated = _validate_response(parsed)
+            validated = _validate_response(parsed, fallback_date=fallback_date)
             validated["token_usage"] = token_usage
             validated["elapsed_sec"] = elapsed
             return validated
