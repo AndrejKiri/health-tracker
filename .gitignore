@@ -67,3 +67,7 @@ data/failed/*
 !data/failed/.gitkeep
 # Stray files directly under data/
 data/*.pdf
+
+# Aggregated summaries — local only, Claude-readable but not for git
+data/summaries/*
+!data/summaries/.gitkeep
