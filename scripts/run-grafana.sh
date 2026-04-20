@@ -19,9 +19,11 @@ set +a
 export POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
 export POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 
+BREW_PREFIX="$(brew --prefix)"
+
 exec grafana server \
-    --config /opt/homebrew/etc/grafana/grafana.ini \
-    --homepath /opt/homebrew/share/grafana \
+    --config "$BREW_PREFIX/etc/grafana/grafana.ini" \
+    --homepath "$BREW_PREFIX/share/grafana" \
     cfg:paths.provisioning="$PROJECT_DIR/grafana/provisioning" \
     cfg:paths.logs=/tmp/grafana-logs \
     cfg:server.http_port=3001
