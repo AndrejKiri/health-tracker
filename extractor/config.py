@@ -41,7 +41,7 @@ def load_config() -> Config:
     load_dotenv()  # no-op if .env does not exist
     return Config(
         # Ollama
-        ollama_url=os.environ.get("OLLAMA_URL", "http://ollama:11434"),
+        ollama_url=os.environ.get("OLLAMA_URL", "http://localhost:11434"),
         ollama_model=os.environ.get("OLLAMA_MODEL", "llama3.1:8b"),
         # Database
         db_host=os.environ.get("DB_HOST", "localhost"),
@@ -50,9 +50,9 @@ def load_config() -> Config:
         db_user=os.environ.get("DB_USER", "health"),
         db_password=os.environ.get("DB_PASSWORD", "health"),
         # Directories
-        watch_dir=os.environ.get("WATCH_DIR", "/data/inbox"),
-        processed_dir=os.environ.get("PROCESSED_DIR", "/data/processed"),
-        failed_dir=os.environ.get("FAILED_DIR", "/data/failed"),
+        watch_dir=os.environ.get("WATCH_DIR", "./data/inbox"),
+        processed_dir=os.environ.get("PROCESSED_DIR", "./data/processed"),
+        failed_dir=os.environ.get("FAILED_DIR", "./data/failed"),
     )
 
 
