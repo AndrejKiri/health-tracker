@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Optional
@@ -124,15 +125,15 @@ def _conn() -> _ManagedConn:
 # Schema initialisation
 # ---------------------------------------------------------------------------
 
-_INIT_SQL_PATH = Path("/app/db/init.sql")
+_INIT_SQL_PATH = Path(os.environ.get("DB_INIT_SQL_PATH", "/app/db/init.sql"))
 
 
 def init_db() -> None:
     """
     Execute the SQL initialisation script to create all tables.
 
-    The script path is ``/app/db/init.sql`` (matches the Dockerfile COPY).
-    Idempotent — uses IF NOT EXISTS internally.
+    Path resolved from DB_INIT_SQL_PATH env var (default: /app/db/init.sql for Docker;
+    set to ./db/init.sql for native macOS). Idempotent — uses IF NOT EXISTS internally.
     """
     if not _INIT_SQL_PATH.exists():
         logger.warning(
