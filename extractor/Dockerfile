@@ -1,3 +1,5 @@
+# For native macOS development with Metal GPU acceleration, use: make watch / make extract
+# See README. This Dockerfile is for optional full-Docker deployment only.
 FROM python:3.12-slim
 
 RUN apt-get update && \
