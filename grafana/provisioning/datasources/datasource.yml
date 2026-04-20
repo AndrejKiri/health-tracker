@@ -3,7 +3,7 @@ datasources:
   - name: PostgreSQL
     type: grafana-postgresql-datasource
     uid: postgres
-    url: postgres:5432
+    url: ${POSTGRES_HOST}:${POSTGRES_PORT}
     database: ${POSTGRES_DB}
     user: ${POSTGRES_USER}
     secureJsonData:
