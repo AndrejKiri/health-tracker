@@ -158,6 +158,7 @@ def _find_or_create_document(
     cur: psycopg2.extensions.cursor,
     filename: str,
     date,
+    subject: str = "personal",
 ) -> int:
     """
     Return the document ID for *filename*, creating a row if needed.
@@ -167,12 +168,12 @@ def _find_or_create_document(
     # Try INSERT first (common path for new files)
     cur.execute(
         """
-        INSERT INTO documents (date, filename)
-        VALUES (%s, %s)
+        INSERT INTO documents (date, filename, subject)
+        VALUES (%s, %s, %s)
         ON CONFLICT (filename) DO NOTHING
         RETURNING id
         """,
-        (date, filename),
+        (date, filename, subject),
     )
     row = cur.fetchone()
     if row:
@@ -194,6 +195,7 @@ def _find_or_create_document(
 def insert_lab_results(
     results: list[LabResult],
     source_file: str,
+    subject: str = "personal",
 ) -> int:
     """
     Bulk-insert LabResult objects into documents + samples.
@@ -214,7 +216,7 @@ def insert_lab_results(
         with conn.cursor() as cur:
             # 1. Find or create the document
             earliest_date = min(r.date for r in results)
-            doc_id = _find_or_create_document(cur, source_file, earliest_date)
+            doc_id = _find_or_create_document(cur, source_file, earliest_date, subject)
 
             # 2. Ensure all metrics exist (upsert unknown measurements)
             unique_metrics = {
@@ -273,6 +275,7 @@ def insert_lab_results(
 def insert_events(
     events: list[MedicalEvent],
     source_file: str,
+    subject: str = "personal",
 ) -> int:
     """
     Bulk-insert MedicalEvent objects into the events table.
@@ -281,6 +284,7 @@ def insert_events(
     ----------
     events      : Validated MedicalEvent instances.
     source_file : Original PDF filename.
+    subject     : Dataset label (e.g. 'personal', 'test-pdf').
 
     Returns
     -------
@@ -298,15 +302,16 @@ def insert_events(
             e.title,
             e.description,
             source_file,
+            subject,
         )
         for e in events
     ]
 
     sql = """
         INSERT INTO events
-            (date, end_date, category, subcategory, title, description, source_file)
+            (date, end_date, category, subcategory, title, description, source_file, subject)
         VALUES
-            (%s, %s, %s, %s, %s, %s, %s)
+            (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     with _conn() as conn:

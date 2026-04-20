@@ -29,6 +29,8 @@ class Config:
     processed_dir: str
     failed_dir: str
 
+    # Dataset label written to documents/events rows
+    subject: str
 
 
 def load_config() -> Config:
@@ -53,6 +55,8 @@ def load_config() -> Config:
         watch_dir=os.environ.get("WATCH_DIR", "./data/inbox"),
         processed_dir=os.environ.get("PROCESSED_DIR", "./data/processed"),
         failed_dir=os.environ.get("FAILED_DIR", "./data/failed"),
+        # Dataset label
+        subject=os.environ.get("SUBJECT", "personal"),
     )
 
 
