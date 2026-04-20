@@ -6,119 +6,195 @@ Personal health data pipeline: extract structured data from PDF lab reports usin
 PDF Reports → [Ollama LLM Extraction] → [PostgreSQL] → [Grafana Dashboard]
 ```
 
-## Quick Start
+## Quick Start — Native macOS (recommended)
+
+Runs everything locally with Apple Silicon Metal GPU acceleration. No Docker required.
 
 ### Prerequisites
 
-- Docker Desktop for Mac (with Docker Compose v2)
-- ~6 GB free disk space (for Docker images + Ollama model)
+```bash
+brew install ollama poppler postgresql@16 grafana
+# tesseract is also required (brew install tesseract if not present)
+```
 
-### 1. Start the stack
+### Setup (one-time)
+
+```bash
+# 1. Clone and enter the project
+cd health-tracker
+
+# 2. Create inbox directories
+mkdir -p data/inbox data/processed data/failed
+
+# 3. Configure credentials
+cp .env.example .env
+# Edit .env — set POSTGRES_PASSWORD and GRAFANA_ADMIN_PASSWORD
+
+# 4. Install Python dependencies
+make install-deps
+
+# 5. Start PostgreSQL and initialize the database
+make db-start
+make db-init        # creates user, database, schema, and seeds reference ranges
+
+# 6. Pull the LLM model
+make ollama-start
+make pull-model     # downloads ~1 GB (qwen2.5:1.5b default; edit OLLAMA_MODEL in .env)
+```
+
+### Daily use
+
+```bash
+make start          # starts PostgreSQL + Ollama + Grafana
+                    # Grafana → http://localhost:3001
+
+make watch          # start the PDF watcher in a separate terminal
+                    # drop PDFs into data/inbox/ to process them
+
+make stop           # shut everything down when done
+```
+
+**Verify Metal GPU is active:**
+```bash
+make status         # PROCESSOR column should show "100% GPU"
+```
+
+**On M-series Macs, extraction takes 5–30 seconds per PDF** (vs. minutes on CPU).
+
+Nothing starts at login — `make start` / `make stop` are the on/off switch.
+
+---
+
+## Quick Start — Full Docker (alternative)
+
+Runs all four services in containers. No native tooling required, but inference is CPU-only (no Metal acceleration).
+
+### Prerequisites
+
+- OrbStack or Docker Desktop with Docker Compose v2
+- ~6 GB free disk space
 
 ```bash
 cd health-tracker
-
-# Create the inbox directory for PDF uploads
 mkdir -p data/inbox data/processed data/failed
+cp .env.example .env
+# Edit .env — remove the "Native macOS settings" block before starting
 
-# Start all services
 docker compose up -d
+
+# Pull the LLM model (first time only)
+docker compose exec ollama ollama pull llama3.1:8b   # ~4.7 GB
+
+# Open Grafana at http://localhost:3001
 ```
 
-This starts:
-- **PostgreSQL** on port 5432 (auto-creates schema; optional local sample seed is not in the repo)
-- **Ollama** on port 11434 (LLM server)
-- **Grafana** on port 3000 (dashboards)
-- **Extractor** service (watches `data/inbox/` for new PDFs)
-
-### 2. Pull the LLM model
-
-The first time, you need to pull the model into Ollama:
-
-```bash
-docker compose exec ollama ollama pull llama3.1:8b
-```
-
-This downloads ~4.7 GB. For a lighter alternative:
-
-```bash
-docker compose exec ollama ollama pull qwen2.5:7b
-```
-
-Then update `OLLAMA_MODEL` in `docker-compose.yml` to match.
-
-### 3. Open Grafana
-
-Navigate to [http://localhost:3000](http://localhost:3000)
-
-- Username: `admin`
-- Password: `health`
-
-The **Health Timeline** dashboard loads automatically. If you have a local `db/seed_sample_data.sql` (not tracked in Git), import it after the stack is up to populate the same kind of demo timeline (thousands of lab rows and events). See [Sample Data](#sample-data).
-
-### 4. Process your own PDFs
-
-Drop a PDF into the inbox:
-
-```bash
-cp your-lab-report.pdf data/inbox/
-```
-
-The watcher picks it up automatically, sends it through Ollama for extraction, and writes the structured data to PostgreSQL. Processed files move to `data/processed/`, failures to `data/failed/`.
+---
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Docker Compose                     │
+│              Native macOS (primary)                   │
 │                                                       │
-│  ┌──────────┐    ┌──────────┐    ┌──────────────────┐│
-│  │  Ollama   │◄───│Extractor │───►│   PostgreSQL     ││
-│  │ (LLM)    │    │ (Python) │    │   port 5432      ││
-│  │ port 11434│    │          │    │                  ││
-│  └──────────┘    └─────▲────┘    └────────┬─────────┘│
-│                        │                   │          │
-│                  data/inbox/         ┌─────▼────────┐ │
-│                  (PDF drop)          │   Grafana    │ │
-│                                      │   port 3000  │ │
-│                                      └──────────────┘ │
+│  Ollama (Metal GPU)   Extractor (.venv)               │
+│  localhost:11434  ◄───  python -m extractor.cli       │
+│                              │                        │
+│                    data/inbox/ (PDF drop)             │
+│                              │                        │
+│                       PostgreSQL                      │
+│                       localhost:5432                  │
+│                              │                        │
+│                          Grafana                      │
+│                       localhost:3001                  │
 └─────────────────────────────────────────────────────┘
 ```
 
-## CLI Usage
+---
 
-The extractor service also has a command-line interface for manual operations:
+## Makefile Reference
+
+```
+make help           # list all targets
+
+# Services
+make start          # start DB + Ollama + Grafana
+make stop           # stop all services
+make db-start       # start PostgreSQL only
+make ollama-start   # start Ollama only
+make grafana-start  # start Grafana only (http://localhost:3001)
+make status         # show Ollama GPU usage
+
+# Setup
+make install-deps   # create .venv and install Python dependencies
+make db-init        # create DB user/schema/seed (run once after db-start)
+make pull-model     # pull OLLAMA_MODEL from .env into native Ollama
+make check-deps     # verify all required system tools are installed
+
+# Extractor
+make watch          # start PDF inbox watcher
+make extract PDF=path/to/report.pdf   # single extraction, print JSON
+make seed           # re-seed reference ranges
+make list           # list all processed files
+```
+
+---
+
+## CLI Usage
 
 ```bash
 # Extract a PDF and print JSON (no database write)
-docker compose exec extractor python -m extractor.cli extract /data/inbox/report.pdf
+make extract PDF=tests/sample_pdfs/complete_blood_count_2024.pdf
 
-# Import a PDF directly into the database
-docker compose exec extractor python -m extractor.cli import /data/inbox/report.pdf
+# Import directly into the database
+.venv/bin/python -m extractor.cli import path/to/report.pdf
 
-# Process all PDFs in a directory
-docker compose exec extractor python -m extractor.cli import-dir /data/inbox/
+# Query lab results for a measurement
+.venv/bin/python -m extractor.cli query WBC
+.venv/bin/python -m extractor.cli query Hemoglobin --start-date 2024-01-01
 
-# List all processed files
-docker compose exec extractor python -m extractor.cli list
-
-# Query lab results for a specific measurement
-docker compose exec extractor python -m extractor.cli query WBC
-
-# Query with date range
-docker compose exec extractor python -m extractor.cli query Hemoglobin --start-date 2024-01-01 --end-date 2024-12-31
-
-# Seed reference ranges (already done on init, but can re-run)
-docker compose exec extractor python -m extractor.cli seed
+# List processed files
+make list
 ```
 
 Add `-v` / `--verbose` to any command for debug logging.
 
+---
+
+## Configuration
+
+All settings are environment variables. Copy `.env.example` to `.env` and edit.
+
+| Variable | Native default | Docker default | Description |
+|----------|---------------|----------------|-------------|
+| `OLLAMA_URL` | `http://localhost:11434` | `http://ollama:11434` | Ollama API endpoint |
+| `OLLAMA_MODEL` | `qwen2.5:1.5b` | `llama3.1:8b` | Model for extraction |
+| `POSTGRES_HOST` | `localhost` | `postgres` | PostgreSQL host |
+| `POSTGRES_PORT` | `5432` | `5432` | PostgreSQL port |
+| `POSTGRES_DB` | `health_tracker` | same | Database name |
+| `POSTGRES_USER` | `health` | same | Database user |
+| `POSTGRES_PASSWORD` | — | — | Database password (required) |
+| `DB_INIT_SQL_PATH` | `./db/init.sql` | `/app/db/init.sql` | Schema init script path |
+| `WATCH_DIR` | `./data/inbox` | `/data/inbox` | PDF inbox directory |
+| `PROCESSED_DIR` | `./data/processed` | `/data/processed` | Successful extractions |
+| `FAILED_DIR` | `./data/failed` | `/data/failed` | Failed extractions |
+
+---
+
+## Using a Different LLM
+
+Edit `OLLAMA_MODEL` in `.env`, then:
+
+```bash
+make pull-model
+```
+
+Tested models: `qwen2.5:1.5b` (fast, default), `llama3.1:8b`, `qwen2.5:7b`, `mistral`. Larger models give better extraction quality but need more unified memory.
+
+---
+
 ## Data Model
 
 ### Lab Results
-
-Each measurement extracted from a PDF:
 
 | Field | Type | Example |
 |-------|------|---------|
@@ -126,168 +202,88 @@ Each measurement extracted from a PDF:
 | category | text | Complete Blood Count |
 | measurement | text | WBC |
 | value | double | 7.2 |
-| value_text | text | not_detected |
 | unit | text | x10E9/L |
 | flag | text | H, L, or NULL |
 
 ### Reference Ranges
 
-108 pre-seeded measurements across 17 categories:
-
-- Complete Blood Count (WBC, RBC, Hemoglobin, Platelets, ...)
-- Metabolic Panel (Glucose, Creatinine, Sodium, Potassium, ...)
-- Liver Panel (ALT, AST, Alk Phos, Bilirubin, ...)
-- Lipid Panel (Total Cholesterol, HDL, LDL, Triglycerides)
-- Thyroid (TSH, Free T4, Free T3)
-- Inflammatory Markers (CRP, ESR, IL-6)
-- And more: Iron Studies, Vitamins, Coagulation, Blood Gas, Cardiac Markers, Lymphocyte Subsets, Endocrine
+108 pre-seeded measurements across 17 categories: Complete Blood Count, Metabolic Panel, Liver Panel, Lipid Panel, Thyroid, Inflammatory Markers, Iron Studies, Vitamins, Coagulation, Blood Gas, Cardiac Markers, Lymphocyte Subsets, Endocrine.
 
 ### Medical Events
 
-Procedures, imaging, treatments, and other non-lab events:
+Procedures, imaging, treatments, and other non-lab events (date, category, subcategory, title).
 
-| Field | Type | Example |
-|-------|------|---------|
-| date | date | 2024-01-15 |
-| end_date | date | (nullable, for ranges) |
-| category | text | Imaging |
-| subcategory | text | MRI |
-| title | text | T-spine |
+---
 
 ## Grafana Dashboard
 
-The pre-built dashboard includes:
+Pre-built dashboard at http://localhost:3001 includes:
 
 - **Overview stats** — total lab results, events, flagged values
-- **Medical Events Timeline** — state timeline visualization of all events
-- **Complete Blood Count** — WBC, Hemoglobin, Platelets, RBC with reference range bands
-- **Metabolic Panel** — Glucose, Creatinine, Sodium, Potassium
-- **Liver Panel** — ALT, AST, Alk Phos, Total Bilirubin
-- **Lipid Panel** — Total Cholesterol, HDL, LDL, Triglycerides
-- **Inflammatory Markers** — CRP (log scale), ESR
-- **Thyroid** — TSH (log scale), Free T4, Free T3
+- **Medical Events Timeline** — state timeline of all events
+- **CBC, Metabolic, Liver, Lipid, Thyroid, Inflammatory Markers** panels
 - **Dynamic View** — select any measurement from dropdowns
-- **Flagged Results** — table of all out-of-range values
-- **Full Data Table** — all lab results with reference ranges
+- **Flagged Results** and **Full Data Table**
 
-Each time series panel shows green reference range bands so you can immediately see when values are outside normal.
+Each time series panel shows green reference range bands.
 
-## Configuration
-
-All settings are environment variables (set in `docker-compose.yml`):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| OLLAMA_URL | http://ollama:11434 | Ollama API endpoint |
-| OLLAMA_MODEL | llama3.1:8b | Model for extraction |
-| DB_HOST | postgres | PostgreSQL host |
-| DB_PORT | 5432 | PostgreSQL port |
-| DB_NAME | health_tracker | Database name |
-| DB_USER | health | Database user |
-| DB_PASSWORD | health | Database password |
-| WATCH_DIR | /data/inbox | Directory to watch for PDFs |
-| PROCESSED_DIR | /data/processed | Where processed PDFs go |
-| FAILED_DIR | /data/failed | Where failed PDFs go |
-
-## Using a Different LLM
-
-To use a different model:
-
-```bash
-# Pull a different model
-docker compose exec ollama ollama pull mistral
-
-# Update docker-compose.yml
-# Change OLLAMA_MODEL: mistral
-docker compose restart extractor
-```
-
-Tested models: `llama3.1:8b`, `qwen2.5:7b`, `mistral`. Larger models (13B+) give better extraction quality but need more RAM.
+---
 
 ## Adding Custom Reference Ranges
 
 Edit `reference_ranges.json` and re-seed:
 
 ```bash
-docker compose exec extractor python -m extractor.cli seed
+make seed
 ```
 
-Or insert directly via SQL:
-
-```sql
-INSERT INTO reference_ranges (measurement, category, unit, reference_low, reference_high, scale)
-VALUES ('My Custom Test', 'Custom', 'units', 10, 50, 'linear')
-ON CONFLICT (measurement) DO UPDATE SET
-  reference_low = EXCLUDED.reference_low,
-  reference_high = EXCLUDED.reference_high;
-```
+---
 
 ## Sample Data
 
-The repository does **not** include a large SQL seed file (keep `db/seed_sample_data.sql` private on your machine if you use one). First-time database init runs `db/02-post-schema-placeholder.sql` after `init.sql`; it does not insert sample rows—it only satisfies the second init script slot. The database starts empty aside from schema and reference-range seeding from `init.sql`.
+Three sample PDFs in `tests/sample_pdfs/` for testing the extraction pipeline:
+- `complete_blood_count_2024.pdf`
+- `metabolic_panel_2024.pdf`
+- `thyroid_lipid_2024.pdf`
 
-If you maintain a local `db/seed_sample_data.sql` (for example derived from the [osteosarc.com](https://osteosarc.com/timeline/) timeline-style dataset), load it after Postgres is healthy:
+The repository does not include personal lab data. The database starts empty aside from schema and reference range seeding.
 
-```bash
-docker compose exec -T postgres psql -U health -d health_tracker < db/seed_sample_data.sql
-```
-
-That style of file typically includes thousands of lab results, hundreds of medical events, and MRD rows—enough to fully populate the Grafana dashboard.
-
-Three sample PDFs in `tests/sample_pdfs/` can be used to test the extraction pipeline:
-- `complete_blood_count_2024.pdf` — CBC panel
-- `metabolic_panel_2024.pdf` — Comprehensive metabolic panel (includes a flagged glucose)
-- `thyroid_lipid_2024.pdf` — Thyroid + lipid + vitamins
-
-## Stopping and Cleanup
-
-```bash
-# Stop all services (data persists)
-docker compose down
-
-# Stop and remove all data (fresh start)
-docker compose down -v
-```
+---
 
 ## Project Structure
 
 ```
 health-tracker/
-├── docker-compose.yml          # Full stack: Postgres + Ollama + Grafana + Extractor
-├── README.md
+├── Makefile                    # Native macOS workflow targets
+├── docker-compose.yml          # Full Docker alternative (all 4 services)
+├── .env.example                # Configuration template
 ├── reference_ranges.json       # 108 measurement reference ranges
 ├── db/
 │   ├── init.sql                # Schema + reference range seeds
-│   ├── 02-post-schema-placeholder.sql  # No-op second init step (no bundled lab/event seed)
-│   └── seed_sample_data.sql    # Optional large seed (gitignored; keep local only)
+│   └── migrations/             # Schema migrations
 ├── extractor/
-│   ├── Dockerfile
+│   ├── Dockerfile              # For optional full-Docker deployment
 │   ├── requirements.txt
-│   ├── __init__.py
 │   ├── config.py               # Environment-based configuration
 │   ├── schema.py               # Pydantic v2 data models
 │   ├── pdf_parser.py           # PDF text extraction (pymupdf + OCR fallback)
-│   ├── prompts.py              # LLM prompt templates with measurement catalog
+│   ├── prompts.py              # LLM prompt templates
 │   ├── llm_client.py           # Async Ollama client with retry logic
 │   ├── db.py                   # PostgreSQL operations
 │   ├── cli.py                  # Command-line interface
-│   └── watcher.py              # Filesystem watcher for auto-processing
+│   └── watcher.py              # Filesystem watcher
 ├── grafana/
 │   ├── dashboards/
-│   │   └── health-timeline.json  # Pre-built dashboard (40 panels)
+│   │   └── health-timeline.json
 │   └── provisioning/
-│       ├── dashboards/
-│       │   └── dashboard.yml
-│       └── datasources/
-│           └── datasource.yml
+│       ├── dashboards/dashboard.yml
+│       └── datasources/datasource.yml
+├── scripts/
+│   └── run-grafana.sh          # Native Grafana launcher
 ├── tests/
-│   ├── generate_sample_pdfs.py
 │   └── sample_pdfs/
-│       ├── complete_blood_count_2024.pdf
-│       ├── metabolic_panel_2024.pdf
-│       └── thyroid_lipid_2024.pdf
 └── data/                       # Created at runtime
-    ├── inbox/                  # Drop PDFs here
-    ├── processed/              # Successfully processed
-    └── failed/                 # Failed extractions
+    ├── inbox/
+    ├── processed/
+    └── failed/
 ```
