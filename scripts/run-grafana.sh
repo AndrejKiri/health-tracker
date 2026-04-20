@@ -18,6 +18,7 @@ set +a
 
 export POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
 export POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+export GRAFANA_DASHBOARDS_PATH="$PROJECT_DIR/grafana/dashboards"
 
 BREW_PREFIX="$(brew --prefix)"
 
