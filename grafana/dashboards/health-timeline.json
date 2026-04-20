@@ -313,11 +313,11 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         },
         "orientation": "auto",
-        "textMode": "auto",
+        "textMode": "value",
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center"
