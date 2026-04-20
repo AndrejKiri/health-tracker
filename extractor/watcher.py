@@ -64,13 +64,15 @@ def _ensure_dirs() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _process_file(pdf_path: str) -> None:
+def _process_file(pdf_path: str, subject: str | None = None) -> None:
     """
     Run the full extraction pipeline on a single PDF file.
 
     On success: move to PROCESSED_DIR.
     On failure: move to FAILED_DIR and log the error.
     """
+    if subject is None:
+        subject = config.subject
     # Lazy imports to avoid circular dependency at module level
     from .db import check_flags_against_references, insert_events, insert_lab_results, is_processed, log_processing
     from .llm_client import extract_from_text
@@ -100,8 +102,8 @@ def _process_file(pdf_path: str) -> None:
         events = [MedicalEvent.model_validate(e) for e in result["events"]]
 
         check_flags_against_references(lab_results)
-        insert_lab_results(lab_results, filename)
-        insert_events(events, filename)
+        insert_lab_results(lab_results, filename, subject=subject)
+        insert_events(events, filename, subject=subject)
         log_processing(filename, "success")
 
         logger.info(
@@ -137,9 +139,10 @@ def _process_file(pdf_path: str) -> None:
 class _PDFEventHandler(FileSystemEventHandler):
     """React to new PDF files appearing in the watched directory."""
 
-    def __init__(self, stop_event: Event) -> None:
+    def __init__(self, stop_event: Event, subject: str) -> None:
         super().__init__()
         self._stop_event = stop_event
+        self._subject = subject
 
     def _is_pdf(self, path: str) -> bool:
         return path.lower().endswith(".pdf")
@@ -150,19 +153,16 @@ class _PDFEventHandler(FileSystemEventHandler):
             return
 
         logger.info("New PDF detected: '%s'", path)
+        subject = self._subject
 
         def _delayed_process() -> None:
-            # Wait for the copy to settle
             time.sleep(_COPY_SETTLE_SECONDS)
-
-            # Confirm the file still exists after the delay
             if not Path(path).exists():
                 logger.warning(
                     "File disappeared before processing: '%s'", path
                 )
                 return
-
-            _process_file(path)
+            _process_file(path, subject=subject)
 
         _executor.submit(_delayed_process)
 
@@ -180,7 +180,7 @@ class _PDFEventHandler(FileSystemEventHandler):
 # ---------------------------------------------------------------------------
 
 
-def _scan_existing(stop_event: Event) -> None:
+def _scan_existing(stop_event: Event, subject: str = "personal") -> None:
     """Submit any PDFs already present in WATCH_DIR to the thread pool."""
     inbox = Path(config.watch_dir)
     pdfs = list(inbox.glob("*.pdf")) + list(inbox.glob("*.PDF"))
@@ -192,7 +192,7 @@ def _scan_existing(stop_event: Event) -> None:
         for pdf in pdfs:
             if stop_event.is_set():
                 break
-            _executor.submit(_process_file, str(pdf))
+            _executor.submit(_process_file, str(pdf), subject)
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ def _scan_existing(stop_event: Event) -> None:
 # ---------------------------------------------------------------------------
 
 
-def start_watcher() -> None:
+def start_watcher(subject: str | None = None) -> None:
     """
     Start the file watcher and block until a shutdown signal is received.
 
@@ -210,6 +210,9 @@ def start_watcher() -> None:
       to finish before exiting).
     """
     _ensure_dirs()
+
+    resolved_subject = subject if subject is not None else config.subject
+    logger.info("Watcher subject label: '%s'", resolved_subject)
 
     stop_event = Event()
 
@@ -222,16 +225,15 @@ def start_watcher() -> None:
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
 
-    # Submit any files already in the inbox without blocking the main loop
     pre_scan_thread = Thread(
         target=_scan_existing,
-        args=(stop_event,),
+        args=(stop_event, resolved_subject),
         daemon=True,
         name="pre-scan",
     )
     pre_scan_thread.start()
 
-    event_handler = _PDFEventHandler(stop_event)
+    event_handler = _PDFEventHandler(stop_event, resolved_subject)
     observer = Observer()
     observer.schedule(event_handler, path=config.watch_dir, recursive=False)
     observer.start()

@@ -122,9 +122,10 @@ async def _cmd_import(args: argparse.Namespace) -> None:
         lab_results = [LabResult.model_validate(r) for r in result["lab_results"]]
         events = [MedicalEvent.model_validate(e) for e in result["events"]]
 
+        subject = getattr(args, "subject", "personal")
         check_flags_against_references(lab_results)
-        insert_lab_results(lab_results, filename)
-        insert_events(events, filename)
+        insert_lab_results(lab_results, filename, subject=subject)
+        insert_events(events, filename, subject=subject)
         log_processing(filename, "success")
 
         logger.info(
@@ -160,8 +161,11 @@ async def _cmd_import_dir(args: argparse.Namespace) -> None:
 
     logger.info("Found %d PDF(s) in '%s'.", len(pdfs), dir_path)
     for pdf in pdfs:
-        # Reuse import command logic with a synthetic args object
-        import_args = argparse.Namespace(pdf_path=str(pdf), verbose=args.verbose)
+        import_args = argparse.Namespace(
+            pdf_path=str(pdf),
+            verbose=args.verbose,
+            subject=getattr(args, "subject", "personal"),
+        )
         await _cmd_import(import_args)
 
 
@@ -174,8 +178,9 @@ def _cmd_watch(args: argparse.Namespace) -> None:
     """Start the file watcher on WATCH_DIR (blocking)."""
     from .watcher import start_watcher
 
+    subject = getattr(args, "subject", None)
     logger.info("Starting file watcher…")
-    start_watcher()
+    start_watcher(subject=subject)
 
 
 # ---------------------------------------------------------------------------
@@ -296,15 +301,21 @@ def _build_parser() -> argparse.ArgumentParser:
     # import
     p_import = sub.add_parser("import", help="Extract PDF and write to database")
     p_import.add_argument("pdf_path", help="Path to the PDF file")
+    p_import.add_argument("--subject", default="personal",
+                          help="Dataset label (default: personal)")
 
     # import-dir
     p_import_dir = sub.add_parser(
         "import-dir", help="Process all PDFs in a directory"
     )
     p_import_dir.add_argument("dir_path", help="Directory containing PDF files")
+    p_import_dir.add_argument("--subject", default="personal",
+                              help="Dataset label (default: personal)")
 
     # watch
-    sub.add_parser("watch", help="Watch WATCH_DIR for new PDFs")
+    p_watch = sub.add_parser("watch", help="Watch WATCH_DIR for new PDFs")
+    p_watch.add_argument("--subject", default=None,
+                         help="Dataset label (default: SUBJECT env var or 'personal')")
 
     # seed
     sub.add_parser("seed", help="Seed reference ranges into the database")

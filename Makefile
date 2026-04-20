@@ -95,13 +95,23 @@ grafana-stop: ## Stop native Grafana
 # ── Extractor ─────────────────────────────────────────────────────────────────
 
 .PHONY: watch
-watch: ## Start the PDF inbox watcher
-	$(VENV_PYTHON) -m extractor.cli watch
+watch: ## Watch inbox: make watch [SUBJECT=personal]
+	$(VENV_PYTHON) -m extractor.cli watch --subject $(or $(SUBJECT),personal)
 
 .PHONY: extract
-extract: ## Extract a single PDF: make extract PDF=path/to/file.pdf
+extract: ## Extract a single PDF (no DB): make extract PDF=path/to/file.pdf
 	@if [[ -z "$(PDF)" ]]; then echo "Usage: make extract PDF=path/to/file.pdf" && exit 1; fi
 	$(VENV_PYTHON) -m extractor.cli extract $(PDF)
+
+.PHONY: import
+import: ## Import a PDF to DB: make import PDF=path/to/file.pdf [SUBJECT=personal]
+	@if [[ -z "$(PDF)" ]]; then echo "Usage: make import PDF=path/to/file.pdf [SUBJECT=personal]" && exit 1; fi
+	$(VENV_PYTHON) -m extractor.cli import $(PDF) --subject $(or $(SUBJECT),personal)
+
+.PHONY: import-dir
+import-dir: ## Import all PDFs in a dir: make import-dir DIR=path/ [SUBJECT=personal]
+	@if [[ -z "$(DIR)" ]]; then echo "Usage: make import-dir DIR=path/ [SUBJECT=personal]" && exit 1; fi
+	$(VENV_PYTHON) -m extractor.cli import-dir $(DIR) --subject $(or $(SUBJECT),personal)
 
 .PHONY: seed
 seed: ## Seed reference ranges from reference_ranges.json
