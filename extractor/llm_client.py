@@ -66,30 +66,56 @@ _MONTH_MAP = {
 }
 
 
-def _extract_fallback_date(text: str) -> str | None:
-    """Return the first parseable date found in the PDF text, as YYYY-MM-DD."""
-    # ISO format — instant match
-    m = _DATE_PATTERNS[0].search(text)
+_REPORT_DATE_LABEL_RE = re.compile(
+    r"(?:report\s+date|date\s+of\s+service|collected?(?:ion)?(?:\s+date)?|"
+    r"specimen\s+date|test\s+date|result\s+date)\s*[:\-]?\s*",
+    re.IGNORECASE,
+)
+
+
+def _parse_date_at(text: str, pos: int) -> str | None:
+    """Try to parse a date starting near position pos in text."""
+    snippet = text[pos:pos + 40]
+    m = _DATE_PATTERNS[0].match(snippet)
     if m:
         return m.group(1)
-
-    # "Month DD, YYYY"
-    m = _DATE_PATTERNS[1].search(text)
+    m = _DATE_PATTERNS[1].match(snippet)
     if m:
         month = _MONTH_MAP[m.group(1).lower()]
-        day = int(m.group(2))
-        year = int(m.group(3))
-        return f"{year:04d}-{month:02d}-{day:02d}"
-
-    # "DD Month YYYY"
-    m = _DATE_PATTERNS[2].search(text)
+        return f"{int(m.group(3)):04d}-{month:02d}-{int(m.group(2)):02d}"
+    m = _DATE_PATTERNS[2].match(snippet)
     if m:
-        day = int(m.group(1))
         month = _MONTH_MAP[m.group(2).lower()]
-        year = int(m.group(3))
-        return f"{year:04d}-{month:02d}-{day:02d}"
-
+        return f"{int(m.group(3)):04d}-{month:02d}-{int(m.group(1)):02d}"
     return None
+
+
+def _extract_fallback_date(text: str) -> str | None:
+    """Return the report/collection date from the PDF text as YYYY-MM-DD.
+
+    Prefers dates that follow a label like 'Report Date:' or 'Collected:'.
+    Falls back to the most recent date found anywhere in the text.
+    """
+    # 1. Look for labelled dates first
+    for label_match in _REPORT_DATE_LABEL_RE.finditer(text):
+        d = _parse_date_at(text, label_match.end())
+        if d:
+            return d
+
+    # 2. Fallback: collect all dates, return the most recent one
+    candidates: list[str] = []
+    for pattern in _DATE_PATTERNS:
+        for m in pattern.finditer(text):
+            if pattern == _DATE_PATTERNS[0]:
+                candidates.append(m.group(1))
+            elif pattern == _DATE_PATTERNS[1]:
+                month = _MONTH_MAP[m.group(1).lower()]
+                candidates.append(f"{int(m.group(3)):04d}-{month:02d}-{int(m.group(2)):02d}")
+            else:
+                month = _MONTH_MAP[m.group(2).lower()]
+                candidates.append(f"{int(m.group(3)):04d}-{month:02d}-{int(m.group(1)):02d}")
+
+    return max(candidates) if candidates else None
 
 
 # ---------------------------------------------------------------------------
