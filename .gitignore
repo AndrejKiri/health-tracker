@@ -71,3 +71,4 @@ data/*.pdf
 # Aggregated summaries — local only, Claude-readable but not for git
 data/summaries/*
 !data/summaries/.gitkeep
+.claude/skills/
